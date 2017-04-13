@@ -6,14 +6,15 @@ _Status: Experimental._
 [![Build Status](https://ci.appveyor.com/api/projects/status/q34wl2a441dy87gy?svg=true)](https://ci.appveyor.com/project/m-j-w/cpuid-jl)
 [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/m-j-w/CpuId.jl)
 
-Expected to work at least on Julia 0.6, Linux with Intel compatible CPUs.
+Expected to work in general on Julia 0.5 and 0.6, on Linux, Mac and Windows
+with Intel compatible CPUs (which include e.g. AMD).
 
 
 ## Motivation
 
 Besides the obvious reason to gather information for diagnostics, the CPU
 provides valuable information when aiming at increasing the efficiency of code.
-Such usecases could be to taylor the size of working sets of data according to
+Such usecases could be to tailor the size of working sets of data according to
 the available cache sizes, to detect when the code is executed in a virtual
 machine (hypervisor), or to determine the size of the largest SIMD registers
 available.  This information is obtained by directly querying the CPU through
@@ -50,7 +51,7 @@ See the diagnostic summary by typing
        SIMD             max. vector size: 32 bytes = 256 bits
        Data cache       level 1:3 : (32, 256, 8192) kbytes
                         64 byte cache line size
-       Hypervised       false
+       Hypervised       No
 
 
 This initial release covers a selection of basic functionality:
@@ -64,8 +65,10 @@ This initial release covers a selection of basic functionality:
  - `cachesize()` returns a tuple with the sizes of the data caches in bytes.
  - `cpu_base_frequency()`, `cpu_max_frequency()`, `cpu_bus_frequency()` give -
      if supported by the CPU, the base, maximum and bus clock frequencies.
+     Use `has_cpu_frequencies()` to check whether this property is supported.
  - `hypervised()` returns true when the CPU indicates that a hypervisor is
-     running the operating system, aka a virtual machine.
+     running the operating system, aka a virtual machine.  In that case,
+     `hvvendor()` may be invoked to get the, well, hypervisor vendor.
  - `simdbits()` and `simdbytes()` return the size of the largest SIMD register
      available on the executing CPU.
  - `cpuinfo()` generates the summary shown above (markdown string).

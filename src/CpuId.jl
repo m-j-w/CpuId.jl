@@ -8,7 +8,7 @@ module CpuId
 export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        simdbytes, simdbits, address_size, physical_address_size,
        cpu_base_frequency, cpu_max_frequency, cpu_bus_frequency,
-       hypervised, cpuinfo
+       has_cpu_frequencies, hypervised, hvvendor, cpuinfo
 
 
 """
@@ -91,7 +91,21 @@ is erroneous, such as number of physical and logical cores.
 function hypervised() ::Bool
     # alternative: 0x8000_000a, eax bit 8 set if hv present.
     eax, ebx, ecx, edx = cpuid(0x01)
-    (ecx & UInt32(1<<31)) != zero(UInt32)
+    ((ecx >> 31) & one(UInt32)) != zero(UInt32)
+end
+
+
+"""
+    hvvendorstring()
+
+Determine the hypervisor vendor string as provided by the cpu by executing a
+`cpuid` instruction.  Note, this string has a fixed length of 12 characters.
+Use `hvvendor()` if you prefer getting a parsed Julia symbol.  If the CPU is
+not running a hypervisor, an empty string will be returned.
+"""
+function hvvendorstring()
+    eax, ebx, ecx, edx = cpuid(0x4000_0000)
+    transcode(String, reinterpret(UInt8, [ebx, ecx, edx]))
 end
 
 
@@ -139,6 +153,15 @@ const _cpuid_vendor_id = Dict(
 Determine the cpu vendor as a Julia symbol.
 """
 cpuvendor() = get(_cpuid_vendor_id, cpuvendorstring(), :Unknown)
+
+
+"""
+    hvvendor()
+
+Determine the hypervisor vendor as a Julia symbol or `:Unknown` if not running
+a hypervisor.
+"""
+hvvendor() = get(_cpuid_vendor_id, hvvendorstring(), :Unknown)
 
 
 """
@@ -277,8 +300,9 @@ function cachesize()
 
     function cachesize_level(l::UInt32 = zero(UInt32))
         eax, ebx, ecx, edx = cpuid(0x04, 0x00, l)
-        # if eax is zero, we've reached the sentinel.
-        eax == 0 && return ()
+        # --- appveyor ---
+        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
+        eax & 0x1f == 0 && return ()
         # could do a sanity check: cache level reported in eax bits 5:7
         # if lowest bit on eax is zero, then its not a data cache
         eax & 0x01 == 0 && return cachesize_level(l + one(UInt32))
@@ -286,11 +310,24 @@ function cachesize()
         s = (1 + (ebx>>22) & 0x03ff ) *    # ways
             (1 + (ebx>>12) & 0x03ff ) *    # partitions
             (1 +  ebx      & 0x0fff ) *    # linesize
-            (1 +  ecx )                             # sets
-        (s, cachesize_level(l + one(UInt32))...)
+            (1 +  ecx )                    # sets
+        (signed(s), cachesize_level(l + one(UInt32))...)
     end
 
     (cachesize_level()...)
+end
+
+
+"""
+    has_cpu_frequencies()
+
+Determine whether the CPU provides clock frequency information.  If true, then
+`cpu_base_frequency()`, `cpu_max_frequency()` and `cpu_bus_frequency()` should
+be expected to return sensible information.
+"""
+function has_cpu_frequencies() ::Bool
+    eax, ebx, ecx, edx = cpuid(0x00)
+    eax >= 0x16
 end
 
 
@@ -303,12 +340,9 @@ due to throttling, or higher due to frequency boosting.
 """
 function cpu_base_frequency() ::Int
 
-    @noinline _throw_unsupported_leaf(leaf) =
-            error("This cpu does not provide information on leaf $(leaf).")
-
     # Do we have a leaf 16?
     eax, ebx, ecx, edx = cpuid(0x00)
-    eax < 0x16 && _throw_unsupported_leaf(0x16)
+    eax < 0x16 && return -1
 
     eax, ebx, ecx, edx = cpuid(0x16)
     eax & 0xffff
@@ -318,17 +352,15 @@ end
 """
     cpu_max_frequency()
 
-Determine the maximum CPU frequency in MHz as reported directly from the CPU through
-a `cpuid` instrauction call.
+Determine the maximum CPU frequency in MHz as reported directly from the CPU
+through a `cpuid` instrauction call.  Returns minus one if the CPU doesn't
+support this query.
 """
 function cpu_max_frequency() ::Int
 
-    @noinline _throw_unsupported_leaf(leaf) =
-            error("This cpu does not provide information on leaf $(leaf).")
-
     # Do we have a leaf 16?
     eax, ebx, ecx, edx = cpuid(0x00)
-    eax < 0x16 && _throw_unsupported_leaf(0x16)
+    eax < 0x16 && return -1
 
     eax, ebx, ecx, edx = cpuid(0x16)
     ebx & 0xffff
@@ -343,12 +375,9 @@ a `cpuid` instrauction call.
 """
 function cpu_bus_frequency() ::Int
 
-    @noinline _throw_unsupported_leaf(leaf) =
-            error("This cpu does not provide information on leaf $(leaf).")
-
     # Do we have a leaf 16?
     eax, ebx, ecx, edx = cpuid(0x00)
-    eax < 0x16 && _throw_unsupported_leaf(0x16)
+    eax < 0x16 && return -1
 
     eax, ebx, ecx, edx = cpuid(0x16)
     ecx & 0xffff
@@ -363,7 +392,8 @@ Generate a markdown table with the results of all of the CPU querying
 functions provided by the module `CpuId`.  Intended to give a quick overview
 for diagnostic purposes e.g. in log files.
 """
-cpuinfo() = Base.Markdown.parse("""
+function cpuinfo()
+    Base.Markdown.parse("""
 | `Cpuid` Property | Value                                          |
 |:-------------|:---------------------------------------------------|
 | Brand        | $(CpuId.cpubrand())                                |
@@ -371,10 +401,13 @@ cpuinfo() = Base.Markdown.parse("""
 | Model        | $(CpuId.cpumodel())                                |
 | Address Size | $(CpuId.address_size()) bits virtual, $(CpuId.physical_address_size()) bits physical |
 | SIMD         | max. vector size: $(CpuId.simdbytes()) bytes = $(CpuId.simdbits()) bits    |
-| Data cache   | level $(1:length(CpuId.cachesize())) : $(CpuId.cachesize() .÷ 1024) kbytes |
-|              | $(CpuId.cachelinesize()) byte cache line size      |
-| Hypervised   | $(CpuId.hypervised())                              |
-""")
+| Data cache   | level $(1:length(CpuId.cachesize())) : $(map(x->div(x,1024), CpuId.cachesize())) kbytes |
+|              | $(CpuId.cachelinesize()) byte cache line size      | """ *
+    ( has_cpu_frequencies() ?
+"\n| Clock Freq.  | $(CpuId.cpu_base_frequency()) / $(CpuId.cpu_max_frequency()) MHz (base/max) |
+|              | $(CpuId.cpu_bus_frequency()) MHz bus frequency     | " : "") *
+"\n| Hypervisor   |" * (CpuId.hypervised() ?  " Yes, $(CpuId.hvvendor()) " : " No ") * " |")
+end
 
 
 end # module CpuId
