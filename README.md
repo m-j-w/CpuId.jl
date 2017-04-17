@@ -8,6 +8,9 @@ using the assembly instruction `cpuid`.
 [![Build Status](https://ci.appveyor.com/api/projects/status/q34wl2a441dy87gy?svg=true)](https://ci.appveyor.com/project/m-j-w/cpuid-jl)
 [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/m-j-w/CpuId.jl)
 
+[![CpuId](http://pkg.julialang.org/badges/CpuId_0.5.svg)](http://pkg.julialang.org/?pkg=CpuId)
+[![CpuId](http://pkg.julialang.org/badges/CpuId_0.6.svg)](http://pkg.julialang.org/?pkg=CpuId)
+
 _Status: Working alpha version, ready for you to try out._
 
 Works on Julia 0.5 and 0.6, on Linux, Mac and Windows with Intel compatible CPUs.
@@ -138,34 +141,32 @@ julia> cpufeaturetable()
 
 ## Background
 
-The `cpuid` instruction is a general way provided by the CPU vendor to query
-hardware properties.
+The `cpuid` instruction is a general way provided by the CPU vendor to obtain
+basic hardware information.  It provides data in form of boolean bit fields,
+integer fields and strings, all packed in the returned CPU registers eax, ebx,
+ecx and edx. Which information is returned is determined by the so called leaf,
+which is indicated by setting the register eax to a specific 32 bit integer
+value before executing the instruction.  The extend and kind of information
+obtainable via this facility has changed quite a lot over the past decades and
+still evolves with every CPU generation.  Thus, not all information is available
+on every CPU model, and certainly everything is vendor dependent.
 
-...
+Moreover, the `cpuid` instruction can only provide information for the executing
+physical CPU, called a package.  To obtain information on all packages, all
+physical and logical cores, the executing program must be pinned sequentially to
+each and every core, and gather that information. This is how `libuv` or `hwloc`
+obtain that information.
 
-A particular cool thing is the combination of Julia's JIT compilation together
-with the *cpuid* instruction.  Since *cpuid* is such a frequently required
-instruction, LLVM really understands what you're doing, and, since
-JIT-compiling, completely eliminates those calls. After all, LLVM already knows
-the answer based on what machine it is compiling for.  This is true for example
-for all the `hasleaf` calls that are called from within another function and
-inlined. See for yourself:
+In most situations, this is not really required.  Even on machines with multiple
+CPUs, they are typically of the same model.  And a single process is not really
+interested in what would have been possible on another core, anyway.  However,
+it is relevant to know with how many other cores a third level cache is to be
+shared with.
 
-```jl
-julia> fn() = CpuId.hasleaf(0x0000_0000)
-       fn()
-true
-
-julia> @code_native fn()
-    pushq   %rbp
-    movq    %rsp, %rbp
-    movb    $1, %al        # <== this is a constant 'true'
-    popq    %rbp
-    retq
-    nopl    (%rax,%rax)
-```
-
-Hence, runtime safety at negative cost overhead.
+Even worse, the really interesting stuff is stored in the so called machine
+specific registers (MSR), which however require special 'ring 0' privileges to
+be granted to the executing program code.  Typically, only the kernel and root
+have these.  For instance the actual CPU clock frequency is stored there.
 
 
 ## Limitations
@@ -179,6 +180,7 @@ has numerous corner cases, which this package does not address, yet.  In systems
 having multiple processor packets (independent sockets holding a processor), the
 `cpuid` instruction may give only information with respect to the current
 physical and logical core that is executing the program code.
+
 
 #### Specific limitations
 
@@ -223,14 +225,21 @@ http://www.etallen.com/cpuid.html), which essentially does exactly the same.  On
 Ubuntu, you would install it using `sudo apt install cpuid`, then use it to show
 a summary by simply typing `cpuid`.
 
-The Julia package [Hwloc.jl](https://github.com/JuliaParallel/Hwloc.jl)
-provides similar and more information regarding the topology of your CPUs, viz.
-number of CPU packages, physical & logical cores and associated caches, along
-with a number of features regarding thread affinity. However, it also pulls in
-additional external binary dependencies in that it relies on
-[hwloc](https://www.open-mpi.org/projects/hwloc/), which also implies quite
-some computational overhead. Whether this is an issue in the first place
-depends much on your usecase.
+Then, of course, there are a few functions in Julia Base. These are
+`Base.Sys.cpu_info()`, and `Base.Sys.cpu_summary()`, as well as the global
+variables `Base.Sys.CPU_CORES`, and `Base.Sys.cpu_name`.  These are mostly
+provided by wrapping *libuv*.  In particular `CPU_CORES` is the reason for this
+module: It's always unclear whether that number includes all logical cores
+(Hyperthreading) or not...
+
+The Julia package [Hwloc.jl](https://github.com/JuliaParallel/Hwloc.jl) provides
+similar and more information primarily directed towards the topology of your
+CPUs, viz.  number of CPU packages, physical & logical cores and associated
+caches, along with a number of features to deal with thread affinity. However,
+it also pulls in additional external binary dependencies in that it relies on
+[hwloc](https://www.open-mpi.org/projects/hwloc/), which also implies quite some
+computational overhead. Whether this is an issue in the first place depends much
+on your usecase.
 
 **The difference:** *CpuId* takes a different approach in that it talks
 directly to the CPU. For instance, asking the CPU for its number of cores or

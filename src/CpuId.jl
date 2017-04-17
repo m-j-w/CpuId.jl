@@ -51,14 +51,14 @@ end
 """
     cpucycle()
 
-Read the CPU's time stamp counter, TSC, directly with a `rdtsc` instruction.
-This counter is increased for every CPU cycle, until reset.  This function
-has, when inlined, practically no overhead and is, thus, probably the fasted
-methods to exactly count how many cycles the CPU has spent working since last
-read.
+Read the CPU's [Time Stamp Counter, TSC](https://en.wikipedia.org/wiki/Time_Stamp_Counter),
+directly with a `rdtsc` instruction.  This counter is increased for every CPU
+cycle, until reset.  This function has, when inlined, practically no overhead
+and is, thus, probably the fasted methods to exactly count how many cycles the
+CPU has spent working since last read.
 
-Note, the TSC runs at a constant rate if `hasfeature(:TSCINV)==true`,
-otherwise is tied to the current CPU clock frequency..
+Note, the TSC runs at a constant rate if `hasfeature(:TSCINV)==true`;
+otherwise, it is tied to the current CPU clock frequency.
 
 Hint: This function is extremely efficient when inlined into your own code.
       Convince yourself by typing `@code_native CpuId.cpucycle()`.
@@ -72,11 +72,11 @@ function cpucycle end
 """
     cpucycle_id()
 
-Read the CPU's time stamp counter, TSC, and executing CPU id directly with a
-`rdtscp` instruction.  This function is similar to the `cpucycle()`, but uses
-an instruction that also allows to detect if the code has been moved to a
-different executing CPU.  See also the comments for `cpucycle()` which equally
-apply.
+Read the CPU's [Time Stamp Counter, TSC](https://en.wikipedia.org/wiki/Time_Stamp_Counter),
+and executing CPU id directly with a `rdtscp` instruction.  This function is
+similar to the `cpucycle()`, but uses an instruction that also allows to
+detect if the code has been moved to a different executing CPU.  See also the
+comments for `cpucycle()` which equally apply.
 """
 function cpucycle_id end
 
@@ -335,20 +335,25 @@ function cpuarchitecture() ::Symbol
     # See also Table 35-1 in Intel's Architectures Software Developer Manual.
 
     cpumod = cpumodel()
-    cpumod[:Family] != 0x06 && return :Unknown
+    family = cpumod[:Family]
+    model  = cpumod[:Model]
 
     # Xeon Phi family 0x07, model 0x01
+    family == 0x07 && return :XeonPhi
 
-    model = cpumod[:Model]
-    (model == 0x4e || model == 0x5e) ? :Skylake :
-    (model == 0x3d || model == 0x47 || model == 0x56) ? :Broadwell :
-    (model == 0x3c || model == 0x45 || model == 0x46 || model == 0x3f) ?  :Haswell :
-    (model == 0x3a || model == 0x3e) ? :IvyBridge :
-    (model == 0x2a || model == 0x2d) ? :SandyBridge :
-    (model == 0x25 || model == 0x2c || model == 0x2f) ? :Westmere :
-    (model == 0x1a || model == 0x1e || model == 0x1f || model == 0x2e) ?  :Nehalem :
-    (model == 0x17 || model == 0x1d) ?  :EnhancedIntelCore :
-    (model == 0x0f || model == 0x1d) ?  :IntelCore : :UnknownIntel
+    if family == 0x06
+        return (model == 0x4e || model == 0x5e) ? :Skylake :
+               (model == 0x3d || model == 0x47 || model == 0x56) ? :Broadwell :
+               (model == 0x3c || model == 0x45 || model == 0x46 || model == 0x3f) ?  :Haswell :
+               (model == 0x3a || model == 0x3e) ? :IvyBridge :
+               (model == 0x2a || model == 0x2d) ? :SandyBridge :
+               (model == 0x25 || model == 0x2c || model == 0x2f) ? :Westmere :
+               (model == 0x1a || model == 0x1e || model == 0x1f || model == 0x2e) ?  :Nehalem :
+               (model == 0x17 || model == 0x1d) ?  :EnhancedIntelCore :
+               (model == 0x0f || model == 0x1d) ?  :IntelCore : :UnknownIntel
+    end
+
+    return :Unknown
 end
 
 
@@ -424,6 +429,9 @@ to a running hypervisor (as observed on hvvendor() == :Microsoft).
 Also, this function does not take logical cores (aka hyperthreading) into
 account, but determines the true number of physical cores, which typically
 also share L3 caches and main memory bandwidth.
+
+See also the Julia global variable `Base.Sys.CPU_CORES`, which gives the total
+count of all cores on the machine.
 """
 function cpucores() ::Int
 
@@ -468,6 +476,11 @@ In contrast to `cpucores()`, this function also takes logical cores aka
 hyperthreading into account.  For practical purposes, only I/O intensive code
 should make use of these total number of cores; memory or computation bound
 code will not benefit, but rather experience a detrimental effect.
+
+See also the Julia global variable `Base.Sys.CPU_CORES`, which gives the total
+count of all cores on the machine.  Thus, `Base.Sys.CPU_CORES ÷
+CpuId.cpucores_total()` gives you the number of CPUs (packages) in your
+system.
 """
 function cpucores_total() ::Int
 
@@ -639,7 +652,7 @@ be expected to return sensible information.
 function has_cpu_frequencies() ::Bool
 
     leaf = 0x0000_0016
-    hasleaf(leaf)
+    hasleaf(leaf) || return false
 
     # frequencies are provided if any of the bits in question are non-zero
     eax, ebx, ecx = cpuid(leaf)
