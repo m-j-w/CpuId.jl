@@ -138,18 +138,41 @@ julia> cpufeaturetable()
 
 ## Background
 
-The `cpuid` instruction is a general way provided by the CPU vendor to query
-hardware properties.
+The `cpuid` instruction is a general way provided by the CPU vendor to obtain
+basic hardware information.  It provides data in form of boolean bit fields,
+integer fields and strings, all packed in the returned CPU registers eax, ebx,
+ecx and edx. Which information is returned is determined by the so called leaf,
+which is indicated by setting the register eax to a specific 32 bit integer
+value before executing the instruction.  The extend and kind of information
+obtainable via this facility has changed quite a lot over the past decades and
+still evolves with every CPU generation.  Thus, not all information is available
+on every CPU model, and certainly everything is vendor dependent.
 
-...
+Moreover, the `cpuid` instruction can only provide information for the executing
+physical CPU, called a package.  That's pretty much the thing hat holds the CPU
+heat sink and fan.  Two heat sinks means two packages, ergo only information on
+one of them.  To obtain information on all packages, all physical and logical
+cores, the executing program must be pinned sequentially to each and every core,
+and gather that information.
 
-A particular cool thing is the combination of Julia's JIT compilation together
-with the *cpuid* instruction.  Since *cpuid* is such a frequently required
-instruction, LLVM really understands what you're doing, and, since
+In most situations, this is not really required.  Even on machines with multiple
+CPUs, they are mostly of the same model.  And a single process is not really
+interested in what would have been possible on another core, anyway.  However,
+it is relevant to know with how many other cores a third level cache is to be
+shared with.
+
+Even worse, the really interesting stuff is stored in the so called machine
+specific registers (MSR), which however require special 'ring 0' privileges to
+be granted to the executing program code.  Typically, only the kernel and root
+have these.  For instance the actual CPU clock frequency is stored there.
+
+But still, a particular cool thing is the combination of Julia's JIT compilation
+together with the `cpuid` instruction.  Since `cpuid` is such a frequently
+required instruction, LLVM really understands what you're doing, and, since
 JIT-compiling, completely eliminates those calls. After all, LLVM already knows
 the answer based on what machine it is compiling for.  This is true for example
-for all the `hasleaf` calls that are called from within another function and
-inlined. See for yourself:
+for many of the `hasleaf` calls that are called from within another function and
+get inlined. See for yourself:
 
 ```jl
 julia> fn() = CpuId.hasleaf(0x0000_0000)
@@ -165,7 +188,10 @@ julia> @code_native fn()
     nopl    (%rax,%rax)
 ```
 
-Hence, runtime safety at negative cost overhead.
+Hence, runtime safety at negative cost overhead.  Thus, although this is
+a runtime executed instruction, it is a pretty efficient solution. And
+alternatives, such as accessing a global variable in Julia, are not exactly
+fast.
 
 
 ## Limitations
@@ -179,6 +205,7 @@ has numerous corner cases, which this package does not address, yet.  In systems
 having multiple processor packets (independent sockets holding a processor), the
 `cpuid` instruction may give only information with respect to the current
 physical and logical core that is executing the program code.
+
 
 #### Specific limitations
 
