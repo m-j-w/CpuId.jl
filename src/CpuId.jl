@@ -33,6 +33,20 @@ performance.
 
 
 """
+Helper function to convert 32 bit registers directly to a Julia string.
+"""
+@inline __regs_to_string{N}(regs::NTuple{N,UInt32}) =
+    unsafe_string(Ptr{UInt8}(pointer_from_objref(regs)), sizeof(regs))
+
+"""
+Helper function to convert 32 bit registers directly to a Julia string.
+The tuple is guaranteed to be zero terminated.
+"""
+@inline __regs_to_string_zero{N}(regs::NTuple{N,UInt32}) =
+    unsafe_string(Ptr{UInt8}(pointer_from_objref(regs)))
+
+
+"""
     hasleaf(leaf::UInt32) ::Bool
 
 Helper function (not exported) to test whether the CPU claims to provide the
@@ -51,14 +65,14 @@ end
 """
     cpucycle()
 
-Read the CPU's time stamp counter, TSC, directly with a `rdtsc` instruction.
-This counter is increased for every CPU cycle, until reset.  This function
-has, when inlined, practically no overhead and is, thus, probably the fasted
-methods to exactly count how many cycles the CPU has spent working since last
-read.
+Read the CPU's [Time Stamp Counter, TSC](https://en.wikipedia.org/wiki/Time_Stamp_Counter),
+directly with a `rdtsc` instruction.  This counter is increased for every CPU
+cycle, until reset.  This function has, when inlined, practically no overhead
+and is, thus, probably the fasted methods to exactly count how many cycles the
+CPU has spent working since last read.
 
-Note, the TSC runs at a constant rate if `hasfeature(:TSCINV)==true`,
-otherwise is tied to the current CPU clock frequency..
+Note, the TSC runs at a constant rate if `hasfeature(:TSCINV)==true`;
+otherwise, it is tied to the current CPU clock frequency.
 
 Hint: This function is extremely efficient when inlined into your own code.
       Convince yourself by typing `@code_native CpuId.cpucycle()`.
@@ -72,11 +86,11 @@ function cpucycle end
 """
     cpucycle_id()
 
-Read the CPU's time stamp counter, TSC, and executing CPU id directly with a
-`rdtscp` instruction.  This function is similar to the `cpucycle()`, but uses
-an instruction that also allows to detect if the code has been moved to a
-different executing CPU.  See also the comments for `cpucycle()` which equally
-apply.
+Read the CPU's [Time Stamp Counter, TSC](https://en.wikipedia.org/wiki/Time_Stamp_Counter),
+and executing CPU id directly with a `rdtscp` instruction.  This function is
+similar to the `cpucycle()`, but uses an instruction that also allows to
+detect if the code has been moved to a different executing CPU.  See also the
+comments for `cpucycle()` which equally apply.
 """
 function cpucycle_id end
 
@@ -131,7 +145,7 @@ not running a hypervisor, an string of undefined content will be returned.
 """
 function hvvendorstring()
     eax, ebx, ecx, edx = cpuid(0x4000_0000)
-    transcode(String, reinterpret(UInt8, [ebx, ecx, edx]))
+    __regs_to_string( (ebx, ecx, edx) )
 end
 
 
@@ -155,7 +169,7 @@ function hvversion()
     leaf = 0x4000_0001
     if hasleaf(leaf)
         eax, ebx, ecx, edx = cpuid(leaf)
-        eax != 0x00 && (d[:signature] = transcode(String, reinterpret(UInt8, [eax])))
+        eax != 0x00 && (d[:signature] = __regs_to_string( (eax, ) ))
     end
 
     leaf = 0x4000_0002
@@ -232,7 +246,7 @@ Use `cpuvendor()` if you prefer getting a parsed Julia symbol.
 """
 function cpuvendorstring()
     eax, ebx, ecx, edx = cpuid(0x00)
-    transcode(String, reinterpret(UInt8, [ebx, edx, ecx]))
+    __regs_to_string( (ebx, edx, ecx) )
 end
 
 
@@ -296,13 +310,10 @@ function cpubrand() ::String
     hasleaf(leaf) || _throw_unsupported_leaf(leaf)
 
     # Extract the information from leaf 0x8000_0002..0x8000_0004
-    s = ""
-    for leaf = 0x8000_0002:0x8000_0004
-        eax, ebx, ecx, edx = cpuid(leaf)
-        s *= transcode(String, reinterpret(UInt8, [eax, ebx, ecx, edx]))
-    end
-    # strip leading and trailing blanks and zero character(s)
-    strip(strip(s),'\0')
+    __regs_to_string_zero( (cpuid(0x8000_0002)...,
+                            cpuid(0x8000_0003)...,
+                            cpuid(0x8000_0004)...,
+                            0x0000_0000) )
 end
 
 
@@ -335,20 +346,25 @@ function cpuarchitecture() ::Symbol
     # See also Table 35-1 in Intel's Architectures Software Developer Manual.
 
     cpumod = cpumodel()
-    cpumod[:Family] != 0x06 && return :Unknown
+    family = cpumod[:Family]
+    model  = cpumod[:Model]
 
     # Xeon Phi family 0x07, model 0x01
+    family == 0x07 && return :XeonPhi
 
-    model = cpumod[:Model]
-    (model == 0x4e || model == 0x5e) ? :Skylake :
-    (model == 0x3d || model == 0x47 || model == 0x56) ? :Broadwell :
-    (model == 0x3c || model == 0x45 || model == 0x46 || model == 0x3f) ?  :Haswell :
-    (model == 0x3a || model == 0x3e) ? :IvyBridge :
-    (model == 0x2a || model == 0x2d) ? :SandyBridge :
-    (model == 0x25 || model == 0x2c || model == 0x2f) ? :Westmere :
-    (model == 0x1a || model == 0x1e || model == 0x1f || model == 0x2e) ?  :Nehalem :
-    (model == 0x17 || model == 0x1d) ?  :EnhancedIntelCore :
-    (model == 0x0f || model == 0x1d) ?  :IntelCore : :UnknownIntel
+    if family == 0x06
+        return (model == 0x4e || model == 0x5e) ? :Skylake :
+               (model == 0x3d || model == 0x47 || model == 0x56) ? :Broadwell :
+               (model == 0x3c || model == 0x45 || model == 0x46 || model == 0x3f) ?  :Haswell :
+               (model == 0x3a || model == 0x3e) ? :IvyBridge :
+               (model == 0x2a || model == 0x2d) ? :SandyBridge :
+               (model == 0x25 || model == 0x2c || model == 0x2f) ? :Westmere :
+               (model == 0x1a || model == 0x1e || model == 0x1f || model == 0x2e) ?  :Nehalem :
+               (model == 0x17 || model == 0x1d) ?  :EnhancedIntelCore :
+               (model == 0x0f || model == 0x1d) ?  :IntelCore : :UnknownIntel
+    end
+
+    return :Unknown
 end
 
 
@@ -424,6 +440,9 @@ to a running hypervisor (as observed on hvvendor() == :Microsoft).
 Also, this function does not take logical cores (aka hyperthreading) into
 account, but determines the true number of physical cores, which typically
 also share L3 caches and main memory bandwidth.
+
+See also the Julia global variable `Base.Sys.CPU_CORES`, which gives the total
+count of all cores on the machine.
 """
 function cpucores() ::Int
 
@@ -468,6 +487,11 @@ In contrast to `cpucores()`, this function also takes logical cores aka
 hyperthreading into account.  For practical purposes, only I/O intensive code
 should make use of these total number of cores; memory or computation bound
 code will not benefit, but rather experience a detrimental effect.
+
+See also the Julia global variable `Base.Sys.CPU_CORES`, which gives the total
+count of all cores on the machine.  Thus, `Base.Sys.CPU_CORES ÷
+CpuId.cpucores_total()` gives you the number of CPUs (packages) in your
+system.
 """
 function cpucores_total() ::Int
 
@@ -639,7 +663,7 @@ be expected to return sensible information.
 function has_cpu_frequencies() ::Bool
 
     leaf = 0x0000_0016
-    hasleaf(leaf)
+    hasleaf(leaf) || return false
 
     # frequencies are provided if any of the bits in question are non-zero
     eax, ebx, ecx = cpuid(leaf)

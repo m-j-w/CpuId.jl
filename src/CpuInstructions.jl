@@ -15,6 +15,7 @@ module CpuInstructions
 
 export cpuid, rdtsc, rdtscp
 
+using Base: llvmcall
 
 """
     cpuid(eax, ebx, ecx, edx)
@@ -36,7 +37,6 @@ function cpuid end
 @inline cpuid(;eax = 0, ebx = 0, ecx = 0, edx = 0) = cpuid(eax, ebx, ecx, edx)
 
 # Variant for input registers provided as a 4-tuple
-using Base: llvmcall
 @inline cpuid(exx::Tuple{UInt32,UInt32,UInt32,UInt32}) =
     llvmcall("""
         ; load the values from the tuple
@@ -45,7 +45,7 @@ using Base: llvmcall
         %4 = extractvalue [4 x i32] %0, 2
         %5 = extractvalue [4 x i32] %0, 3
         ; call 'cpuid' with those pointers being loaded into registers EAX, EBX, ECX, EDX
-        %6 = tail call { i32, i32, i32, i32 } asm "cpuid", "={ax},={bx},={cx},={dx},0,1,2,3,~{dirflag},~{fpsr},~{flags}"(i32 %2, i32 %3, i32 %4, i32 %5) #7
+        %6 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,1,2,3,~{dirflag},~{fpsr},~{flags}"(i32 %2, i32 %3, i32 %4, i32 %5) #7
         ; retrieve the result values and convert to vector [4 x i32]
         %7  = extractvalue { i32, i32, i32, i32 } %6, 0
         %8  = extractvalue { i32, i32, i32, i32 } %6, 1
