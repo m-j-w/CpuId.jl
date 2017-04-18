@@ -33,6 +33,20 @@ performance.
 
 
 """
+Helper function to convert 32 bit registers directly to a Julia string.
+"""
+@inline __regs_to_string{N}(regs::NTuple{N,UInt32}) =
+    unsafe_string(Ptr{UInt8}(pointer_from_objref(regs)), sizeof(regs))
+
+"""
+Helper function to convert 32 bit registers directly to a Julia string.
+The tuple is guaranteed to be zero terminated.
+"""
+@inline __regs_to_string_zero{N}(regs::NTuple{N,UInt32}) =
+    unsafe_string(Ptr{UInt8}(pointer_from_objref(regs)))
+
+
+"""
     hasleaf(leaf::UInt32) ::Bool
 
 Helper function (not exported) to test whether the CPU claims to provide the
@@ -131,7 +145,7 @@ not running a hypervisor, an string of undefined content will be returned.
 """
 function hvvendorstring()
     eax, ebx, ecx, edx = cpuid(0x4000_0000)
-    transcode(String, reinterpret(UInt8, [ebx, ecx, edx]))
+    __regs_to_string( (ebx, ecx, edx) )
 end
 
 
@@ -155,7 +169,7 @@ function hvversion()
     leaf = 0x4000_0001
     if hasleaf(leaf)
         eax, ebx, ecx, edx = cpuid(leaf)
-        eax != 0x00 && (d[:signature] = transcode(String, reinterpret(UInt8, [eax])))
+        eax != 0x00 && (d[:signature] = __regs_to_string( (eax, ) ))
     end
 
     leaf = 0x4000_0002
@@ -232,7 +246,7 @@ Use `cpuvendor()` if you prefer getting a parsed Julia symbol.
 """
 function cpuvendorstring()
     eax, ebx, ecx, edx = cpuid(0x00)
-    transcode(String, reinterpret(UInt8, [ebx, edx, ecx]))
+    __regs_to_string( (ebx, edx, ecx) )
 end
 
 
@@ -296,13 +310,10 @@ function cpubrand() ::String
     hasleaf(leaf) || _throw_unsupported_leaf(leaf)
 
     # Extract the information from leaf 0x8000_0002..0x8000_0004
-    s = ""
-    for leaf = 0x8000_0002:0x8000_0004
-        eax, ebx, ecx, edx = cpuid(leaf)
-        s *= transcode(String, reinterpret(UInt8, [eax, ebx, ecx, edx]))
-    end
-    # strip leading and trailing blanks and zero character(s)
-    strip(strip(s),'\0')
+    __regs_to_string_zero( (cpuid(0x8000_0002)...,
+                            cpuid(0x8000_0003)...,
+                            cpuid(0x8000_0004)...,
+                            0x0000_0000) )
 end
 
 
