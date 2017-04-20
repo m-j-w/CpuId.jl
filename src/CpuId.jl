@@ -610,7 +610,7 @@ function cachesize()
     # Called recursively until the first level gives zero cache size
 
     function cachesize_level(l::UInt32)
-        eax, ebx, ecx, edx = cpuid(0x04, 0x00, l)
+        eax, ebx, ecx, edx = cpuid(leaf, 0x00, l)
         # if eax is zero in the lowest 5 bits, we've reached the sentinel.
         eax & 0x1f == 0 && return ()
         # could do a sanity check: cache level reported in eax bits 5:7

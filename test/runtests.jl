@@ -8,30 +8,6 @@ using Base.Test
     println(cpuinfo())
     println(cpufeaturetable())
     println(hvversiontable())
-
-
-    println('\n', "Hypervisor extended version tags:\n", hvversion(), '\n')
-
-    println("Maximum available leafs:")
-    println("0x00000000 : ", CpuId.cpuid(0x0000_0000))
-    println("0x40000000 : ", CpuId.cpuid(0x4000_0000))
-    println("0x80000000 : ", CpuId.cpuid(0x8000_0000))
-    println()
-
-    println("Query hypervisor information:")
-    for r in 0x4000_0000:0x4000_0006
-        println("0x", hex(r), " : ", CpuId.cpuid(r))
-    end
-    println()
-
-    println("Legacy cache 0x02 information:")
-    println("0x00000002 : ", CpuId.cpuid(0x02))
-    println()
-
-    println("Raw CPU topology information:")
-    for r in 0:6
-        println("0x0000000b, subleaf ", r, " : ", CpuId.cpuid(0x0b, 0x00, r))
-    end
     println()
 
     # Can't do real testing on results when target machine is unknown.
@@ -110,4 +86,29 @@ using Base.Test
     #    @test_throws Exception CpuId.CpuInstructions.rdtscp()
     #end
 
+    # If we're on Linux, then also dump /proc/cpuinfo for comparison when on a
+    # remote CI.
+    is_linux() && run(`cat /proc/cpuinfo`)
+
+end
+
+include("mock.jl")
+include("mockdb.jl")
+
+# Dump the cpuid table of the executing CPU
+dump_cpuid_table() ; flush(STDOUT) ; flush(STDERR)
+
+# Run the known cpuid records
+@testset "Mocking" begin
+    for i in 1:length(_mockdb)
+        # temporarily replace the low-level cpuid function with known records
+        mock_cpuid(i)
+        eval(quote
+            @testset "Mocked #$($i) $(strip(cpubrand()))" begin
+                flush(STDOUT) ; flush(STDERR)
+                @test isa( cpubrand(), String )
+            end
+        end)
+        flush(STDOUT) ; flush(STDERR)
+    end
 end
