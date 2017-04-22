@@ -29,12 +29,18 @@ const _mockdb = _mockdb_entry[]
 Temporarily overwrite the low-level cpuid function, to return pre-recorded results.
 """
 function mock_cpuid(idx::Integer)
+
     global _mockdb
-    _fake_cpuid(eax=0, ebx=0, ecx=0, edx=0)::NTuple{4,UInt32} =
+
+    !(1 ≤ idx ≤ length(_mockdb)) &&
+        error("The cpuid mocking database does only have entries " *
+              "with indices 1:$(length(_mockdb))")
+
+    _fake_cpuid(eax=0, ecx=0)::NTuple{4,UInt32} =
         get( _mockdb[idx], (UInt32(eax), UInt32(ecx))
            , (zero(UInt32), zero(UInt32), zero(UInt32), zero(UInt32),) )
 
-    CpuId.cpuid(exx::NTuple{4,UInt32}) = _fake_cpuid(exx...)
+    CpuId.cpuid(eax::UInt32, ecx::UInt32) = _fake_cpuid(eax, ecx)
 end
 
 
@@ -47,9 +53,9 @@ function dump_cpuid_table()
 
     println("# ", strip(CpuId.cpubrand()), " with",
             CpuId.hypervised() ? " "*string(CpuId.hvvendor()) : "out", " hypervisor" )
-    println("push( _mockdb, Dict(")
+    println("push!( _mockdb, Dict(")
 
-    for minleaf in [0x0000_0000,0x4000_0000,0x8000_0000]
+    for minleaf in [0x0000_0000,0x2000_0000,0x4000_0000,0x8000_0000]
         # get the maximum leaf
         maxleaf = first(CpuId.cpuid(minleaf))
         maxleaf < minleaf && continue
@@ -64,7 +70,7 @@ function dump_cpuid_table()
     leaf = 0x0000_0004
     if CpuId.hasleaf(leaf)
         for subleaf in 0x0000_0001:0x0000_000f
-            eax, ebx, ecx, edx = CpuId.cpuid(leaf, 0x00, subleaf)
+            eax, ebx, ecx, edx = CpuId.cpuid(leaf, subleaf)
             println("    (",(leaf, subleaf), " => ", (eax, ebx, ecx, edx), "),")
             eax & 0x1f == 0 && break
         end
@@ -73,7 +79,7 @@ function dump_cpuid_table()
     leaf = 0x0000_000b
     if CpuId.hasleaf(leaf)
         for subleaf in 0x0000_0001:0x0000_000f
-            eax, ebx, ecx, edx = CpuId.cpuid(leaf, 0x00, subleaf)
+            eax, ebx, ecx, edx = CpuId.cpuid(leaf, subleaf)
             println("    (",(leaf, subleaf), " => ", (eax, ebx, ecx, edx), "),")
             ebx & 0xffff == 0x0000 && break
         end

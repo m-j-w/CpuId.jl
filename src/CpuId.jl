@@ -1,5 +1,7 @@
 #=--- CpuId / CpuId.jl ----------------------------------------------------=#
 
+__precompile__()
+
 """
 # Module CpuId
 
@@ -11,9 +13,10 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        simdbytes, simdbits, address_size, physical_address_size,
        cpu_base_frequency, cpu_max_frequency, cpu_bus_frequency,
        has_cpu_frequencies, hypervised, hvvendor, hvversion,
-       hvversiontable, cpucores, cpucores_total, cpucycle, cpucycle_id,
-       cpuinfo, cpufeature, cpufeatures, cpufeaturedesc, cpufeaturetable,
-       cpuarchitecture
+       hvinfo, cpucores, cpucores_total, cpucycle, cpucycle_id,
+       perf_revision, perf_fix_counters, perf_fix_bits, perf_gen_counters,
+       perf_gen_bits, cpuinfo, cpufeature, cpufeatures, cpufeaturedesc,
+       cpufeaturetable, cpuarchitecture
 
 using Base.Markdown: MD
 
@@ -164,53 +167,86 @@ function hvversion()
     d = Dict{Symbol,Any}()
     !hypervised() && return d
 
-    d[:vendor] = hvvendor()
+    vendor = d[:vendor] = hvvendor()
 
     # Signature and version info appear to be vendor specific.
-    # The following only works well for Microsoft hypervisor.
 
-    leaf = 0x4000_0001
-    if hasleaf(leaf)
-        eax, ebx, ecx, edx = cpuid(leaf)
-        eax != 0x00 && (d[:signature] = __regs_to_string( (eax, ) ))
-    end
+    if vendor == :Microsoft
 
-    leaf = 0x4000_0002
-    if hasleaf(leaf)
-        eax, ebx, ecx, edx = cpuid(leaf)
-        if eax != 0x00 && ebx != 0x00
-            d[:build] = Int(eax)
-            d[:major] = Int((ebx >> 16) & 0xffff)
-            d[:minor] = Int( ebx        & 0xffff)
+        # Specs see e.g.
+        # https://msdn.microsoft.com/en-us/library/windows/hardware/dn613994(v=vs.85).aspx
+
+        leaf = 0x4000_0001
+        if hasleaf(leaf)
+            eax, ebx, ecx, edx = cpuid(leaf)
+            eax != 0x00 && (d[:signature] = __regs_to_string( (eax, ) ))
         end
-        if ecx != 0x00 && edx != 0x00
-            d[:servicepack]   = Int(ecx)
-            d[:servicebranch] = Int((edx >> 24) & 0x0000_00ff)
-            d[:servicenumber] = Int( edx        & 0x00ff_ffff)
+
+        leaf = 0x4000_0002
+        if hasleaf(leaf)
+            eax, ebx, ecx, edx = cpuid(leaf)
+            if eax != 0x00 && ebx != 0x00
+                d[:version] = VersionNumber(
+                                    Int((ebx >> 16) & 0xffff),
+                                    Int( ebx        & 0xffff),
+                                    Int(eax))
+            end
+            if ecx != 0x00 && edx != 0x00
+                d[:servicepack] = VersionNumber(
+                                    Int( ecx ),                     # "servicepack"
+                                    Int((edx >> 24) & 0x0000_00ff), # "branch"
+                                    Int( edx        & 0x00ff_ffff)) # "number"
+            end
         end
+
+        return d
+
+    elseif vendor == :Xen
+
+        # Xen is specified e.g. here
+        # https://xenbits.xen.org/docs/unstable/hypercall/x86_64/include,public,arch-x86,cpuid.h.html
+
+        leaf = 0x4000_0001
+        if hasleaf(leaf)
+            eax, ebx, ecx, edx = cpuid(leaf)
+            d[:version] = VersionNumber(Int((eax >> 16) & 0xffff), Int(eax & 0xffff))
+        end
+
+        return d
+
+    elseif vendor == :VMware
+
+        # Specs see
+        # https://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1009458
+        # VmWare seems to provide frequency information, but nothing else valuable
+
+        leaf = 0x4000_0010
+        if hasleaf(leaf)
+            eax, ebx, ecx, edx = cpuid(leaf)
+            eax != 0x00 && (d[:tscfreq] = Int(eax))
+            ebx != 0x00 && (d[:busfreq] = Int(ebx))
+        end
+
+        return d
+
+    elseif vendor == :KVM
+
+        return d
+
     end
 
-    # VmWare seems to provide frequency information, but nothing else valuable
-
-    leaf = 0x4000_0010
-    if hasleaf(leaf)
-        eax, ebx, ecx, edx = cpuid(leaf)
-        eax != 0x00 && (d[:tscfreq] = Int(eax))
-        ebx != 0x00 && (d[:busfreq] = Int(ebx))
-    end
-
-    d
+    return d
 end
 
 
 """
-    hvversiontable() ::Base.Markdown.MD
+    hvinfo() ::Base.Markdown.MD
 
 Generate a markdown table of all the detected/available/supported tags of a
-running hypervisor.  If not running a hypervisor, an empty markdown string is
-returned.
+running hypervisor.  If there is no hosting hypervisor, an empty markdown
+string is returned.
 """
-function hvversiontable()
+function hvinfo()
     d = hvversion()
     isempty(d) && return Base.Markdown.MD()
 
@@ -222,15 +258,11 @@ function hvversiontable()
     haskey(d, :signature) &&
         (md *= string( "| Signature   | '", d[:signature], "' |\n"))
 
-    haskey(d, :major) &&
-        (md *= string( "| Version     | major = '", d[:major], "', minor = '",
-                      d[:minor], "', build = '", d[:build], "',  |\n"))
+    haskey(d, :version) &&
+        (md *= string( "| Version     | ", d[:version], " |\n"))
 
     haskey(d, :servicepack) &&
-        (md *= string( "| Servicepack | servicepack = '", d[:servicepack],
-                                    "', servicebranch = '", d[:servicebranch],
-                                    "', servicenumber = '", d[:servicenumber],
-                                    "',  |\n"))
+        (md *= string( "| Servicepack | ", d[:servicepack], " |\n"))
 
     haskey(d, :tscfreq) &&
         (md *= string( "| Frequencies | TSC = ", d[:tscfreq] ÷ 1000,
@@ -352,19 +384,29 @@ function cpuarchitecture() ::Symbol
     family = cpumod[:Family]
     model  = cpumod[:Model]
 
-    # Xeon Phi family 0x07, model 0x01
-    family == 0x07 && return :XeonPhi
+    # Xeon Phi family 0x07, model 0x01, or Itanium ?
+    family == 0x07 && return :Itanium
 
     if family == 0x06
-        return (model == 0x4e || model == 0x5e) ? :Skylake :
-               (model == 0x3d || model == 0x47 || model == 0x56) ? :Broadwell :
-               (model == 0x3c || model == 0x45 || model == 0x46 || model == 0x3f) ?  :Haswell :
+        return (model == 0x66) ? :Cannonlake :
+               (model == 0x8e || model == 0x9e) ? :Kabylake :
+               (model == 0x4e || model == 0x5e || model == 0x55) ? :Skylake :
+               (model == 0x3d || model == 0x47 || model == 0x4f || model == 0x56) ? :Broadwell :
+               (model == 0x3c || model == 0x3f || model == 0x45 || model == 0x46) ? :Haswell :
                (model == 0x3a || model == 0x3e) ? :IvyBridge :
                (model == 0x2a || model == 0x2d) ? :SandyBridge :
                (model == 0x25 || model == 0x2c || model == 0x2f) ? :Westmere :
                (model == 0x1a || model == 0x1e || model == 0x1f || model == 0x2e) ?  :Nehalem :
                (model == 0x17 || model == 0x1d) ?  :EnhancedIntelCore :
-               (model == 0x0f || model == 0x1d) ?  :IntelCore : :UnknownIntel
+               (model == 0x0f || model == 0x1d) ?  :IntelCore :
+               # Atom models
+               (model == 0x5c) ? :Goldmont :
+               (model == 0x5a) ? :Silvermont :
+               (model == 0x1c) ? :Atom :
+               # Xeon Phi models
+               (model == 0x57) ? :KnightsLanding :
+               # Well, this is awkward...
+               :UnknownIntel
     end
 
     return :Unknown
@@ -463,7 +505,7 @@ function cpucores() ::Int
     nl = zero(UInt32) # "SMT" count
     while (true)
         # ebx[15:0] must be non-zero according to manual
-        eax, ebx, ecx, edx = cpuid(leaf, 0x00, sl)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
         ebx & 0xffff == 0x0000 && break
         sl += one(UInt32)
         lt = ((ecx >> 8) & 0xff) & 0x03
@@ -510,7 +552,7 @@ function cpucores_total() ::Int
     nc = zero(UInt32)
     while (true)
         # ebx[15:0] must be non-zero according to manual
-        eax, ebx, ecx, edx = cpuid(leaf, 0x00, sl)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
         ebx & 0xffff == 0x0000 && break
         sl += one(UInt32)
         lt = (ecx >> 8) & 0xff  # level type, 0x01 == "SMT", 0x02 == "Core", other are invalid.
@@ -611,15 +653,15 @@ function cachesize()
 
     # Called recursively until the first level gives zero cache size
 
-    function cachesize_level(l::UInt32)
-        eax, ebx, ecx, edx = cpuid(leaf, 0x00, l)
+    function cachesize_level(sl::UInt32)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
         # if eax is zero in the lowest 5 bits, we've reached the sentinel.
         eax & 0x1f == 0 && return ()
         # could do a sanity check: cache level reported in eax bits 5:7
         # if lowest bit on eax is zero, then its not a data cache
-        eax & 0x01 == 0 && return cachesize_level(l + one(UInt32))
+        eax & 0x01 == 0 && return cachesize_level(sl + one(UInt32))
         # otherwise this should be a valid data or shared cache level
-        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(l + one(UInt32))...)
+        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(sl + one(UInt32))...)
     end
 
     (cachesize_level(zero(UInt32))...)
@@ -634,7 +676,7 @@ end
     leaf = 0x0000_0004
     hasleaf(leaf) || _throw_unsupported_leaf(leaf)
 
-    # Loop over all subleafs of leaf 0x04 until the cache level bits say
+    # Loop over all subleaves of leaf 0x04 until the cache level bits say
     # we've reached to target level, then check whether it's a data cache or
     # shared cache.
 
@@ -645,7 +687,7 @@ end
     sl = lvl - one(UInt32)
 
     while (true)
-        eax, ebx, ecx, edx = cpuid(leaf, zero(UInt32), sl)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
         # still at a valid cache level ?
         eax & 0x1f == 0 && return 0
         # is this a data cache or shared cache level, eax[0:4]?
@@ -733,6 +775,95 @@ end
 
 
 """
+    perf_revision()
+
+Determine the revision number of the performance monitoring unit.
+
+This information is only available if `cpufeature(PDCM) == true`.
+"""
+function perf_revision() ::Int
+
+    leaf = 0x0000_000a
+    hasleaf(leaf) || return 0
+
+    eax, ebx, ecx, edx = cpuid(leaf)
+    eax & 0xff
+end
+
+
+"""
+    perf_fix_counters()
+
+Determine the number of fixed-function performance counters on the executing
+machine.
+
+This information is only available if `cpufeature(PDCM) == true`.
+"""
+function perf_fix_counters() ::Int
+
+    leaf = 0x0000_000a
+    hasleaf(leaf) || return 0
+
+    eax, ebx, ecx, edx = cpuid(leaf)
+    edx & 0x1f
+end
+
+
+"""
+    perf_gen_counters()
+
+Determine the number of general purpose counters performance counters on the
+executing CPU.  Number of counters is given as per logical processor.
+
+This information is only available if `cpufeature(PDCM) == true`.
+"""
+function perf_gen_counters() ::Int
+
+    leaf = 0x0000_000a
+    hasleaf(leaf) || return 0
+
+    eax, ebx, ecx, edx = cpuid(leaf)
+    (eax >> 8) & 0xff
+end
+
+
+"""
+    perf_fix_bits()
+
+Determine the number of bits fixed-function counters performance counters on
+the executing CPU.
+
+This information is only available if `cpufeature(PDCM) == true`.
+"""
+function perf_fix_bits() ::Int
+
+    leaf = 0x0000_000a
+    hasleaf(leaf) || return 0
+
+    eax, ebx, ecx, edx = cpuid(leaf)
+    (edx >> 5) & 0xff
+end
+
+
+"""
+    perf_gen_bits()
+
+Determine the number of bits general purpose counters performance counters on
+the executing CPU.
+
+This information is only available if `cpufeature(PDCM) == true`.
+"""
+function perf_gen_bits() ::Int
+
+    leaf = 0x0000_000a
+    hasleaf(leaf) || return 0
+
+    eax, ebx, ecx, edx = cpuid(leaf)
+    (eax >> 16) & 0xff
+end
+
+
+"""
     cpuinfo()
 
 Generate a markdown table with the results of all of the CPU querying
@@ -751,7 +882,7 @@ function cpuinfo()
     cores = string( CpuId.cpucores(), " physical cores, "
                   , CpuId.cpucores_total(), " logical cores (on executing CPU)")
     frequencies = !has_cpu_frequencies() ? unsupported :
-                        string(cpu_base_frequency(), " / ", 
+                        string(cpu_base_frequency(), " / ",
                                cpu_max_frequency(), " MHz (base/max), ",
                                cpu_bus_frequency(), " MHz bus")
     hyperthreading = (CpuId.cpucores() == CpuId.cpucores_total() ?  "No " : "") * "Hyperthreading detected"
@@ -759,18 +890,21 @@ function cpuinfo()
     model = string("Family: ", modelfl[:Family], ", Model: ", modelfl[:Model],
                    ", Stepping: ", modelfl[:Stepping], ", Type: ", modelfl[:CpuType])
     simd = string(simdbits(), " bit = ", simdbytes(), " byte max. SIMD vector size" )
-    tsc = string("TSC is ", (cpufeature(:TSC) ? "" : "not "), "accessible via `rdtsc`")
-    tscinv = cpufeature(:TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :
+    tsc = string("TSC is ", (cpufeature(TSC) ? "" : "not "), "accessible via `rdtsc`")
+    tscinv = cpufeature(TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :
                                    "TSC increased at every clock cycle (non-invariant TSC)"
-    perfmon = !cpufeature(:PDCM) ? "Performance Monitoring Counters (PMC) are not supported" :
-                                   "Performance Monitoring Counters (PMC) available via `rdpmc`"
-    ibs = !cpufeature(:IBS) ? "Instruction Based Sampling (IBS) is not supported" :
-                              "CPU supports Instruction Based Sampling (IBS)"
+    perfmon = !cpufeature(PDCM) ? "Performance Monitoring Counters (PMC) are not supported" :
+                                  "Performance Monitoring Counters (PMC) revision $(perf_revision())"
+    perfmon2 = !cpufeature(PDCM) ?  [] :
+        [ ["", "Available hardware counters per logical core:"]
+        , ["", "$(perf_fix_counters()) fixed-function counters of $(perf_fix_bits()) bit width"]
+        , ["", "$(perf_gen_counters()) general-purpose counters of $(perf_gen_bits()) bit width"] ]
+    ibs = !cpufeature(IBS) ? [] : [["", "CPU supports AMD's Instruction Based Sampling (IBS)"]]
 
     Base.Markdown.MD( Base.Markdown.Table( [
         [ "Cpu Property",       "Value"              ],
         #----------------------------------------------
-        [ "Brand",              cpubrand()           ],
+        [ "Brand",              strip(cpubrand())    ],
         [ "Vendor",             cpuvendor()          ],
         [ "Architecture",       cpuarchitecture()    ],
         [ "Model",              model                ],
@@ -784,7 +918,8 @@ function cpuinfo()
         [ "Time Stamp Counter", tsc                  ],
         [ "",                   tscinv               ],
         [ "Perf. Monitoring",   perfmon              ],
-        [ "",                   ibs                  ],
+                                perfmon2...,
+                                ibs...,
         [ "Hypervisor",         hypervisor           ],
        ], [:l, :l] ) )
 end
@@ -797,12 +932,12 @@ calling those functions in a hot zone.
 """
 function __init__()
     # Do we have priviledged access to `rdtsc` instructions?
-    if (cpufeature(:TSC))
+    if (cpufeature(TSC))
         eval(:(cpucycle()    = rdtsc()))
     else
         eval(:(cpucycle()    = zero(UInt64)))
     end
-    if (cpufeature(:RDTSCP))
+    if (cpufeature(RDTSCP))
         eval(:(cpucycle_id() = rdtscp()))
     else
         eval(:(cpucycle_id() = (zero(UInt64),zero(UInt64))))
