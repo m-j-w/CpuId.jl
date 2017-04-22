@@ -70,7 +70,7 @@ const __cpufeaturemap = Dict{Symbol, Tuple{UInt32, Symbol, UInt32, String}}(
     :FXSR          => (0x0000_0001, :EDX , 24 , "FXSAVE, FXRSTOR instructions"),
     :SSE           => (0x0000_0001, :EDX , 25 , "128bit Streaming SIMD Extensions 1"),
     :SSE2          => (0x0000_0001, :EDX , 26 , "128bit Streaming SIMD Extensions 2"),
-    :SS            => (0x0000_0001, :EDX , 27 , "Self Snoop."),
+    :SS            => (0x0000_0001, :EDX , 27 , "Self Snoop"),
     :HTT           => (0x0000_0001, :EDX , 28 , "Max APIC IDs reserved field is valid"),
     :TM            => (0x0000_0001, :EDX , 29 , "Thermal monitor with automatic thermal control"),
     :IA64          => (0x0000_0001, :EDX , 30 , "IA64 processor emulating x86"),
@@ -126,7 +126,7 @@ const __cpufeaturemap = Dict{Symbol, Tuple{UInt32, Symbol, UInt32, String}}(
     :SSEMISALIGN   => (0x8000_0001, :ECX , 7  , "Misaligned SSE"),
     Symbol("3DNowP")=>(0x8000_0001, :ECX , 8  , "3D Now PREFETCH and PREFETCHW instructions"),
     :OSVW          => (0x8000_0001, :ECX , 9  , "Operating-system-visible workaround"),
-    :IBS           => (0x8000_0001, :ECX , 10 , "Instruction based sampling"),
+    :IBS           => (0x8000_0001, :ECX , 10 , "Instruction Based Sampling (IBS)"),
     :XOP           => (0x8000_0001, :ECX , 11 , "XOP"),
     :SKINIT        => (0x8000_0001, :ECX , 12 , "SKINIT, STGI, DEV"),
     :WDT           => (0x8000_0001, :ECX , 13 , "Watch dog timer"),
@@ -167,8 +167,8 @@ const __cpufeaturemap = Dict{Symbol, Tuple{UInt32, Symbol, UInt32, String}}(
     :PAT_          => (0x8000_0001, :EDX , 16 , "FCMOVxx"),
     :PSE36_        => (0x8000_0001, :EDX , 17 , "4 MB PDE bits 16..13"),
      #:reserved    => (0x8000_0001, :EDX , 18 , ""),
-    :MP_           => (0x8000_0001, :EDX , 19 , "MP capable"),
-    :NX_           => (0x8000_0001, :EDX , 20 , "NXE"),
+    :MP            => (0x8000_0001, :EDX , 19 , "MP capable"),
+    :NX            => (0x8000_0001, :EDX , 20 , "NXE"),
      #:reserved    => (0x8000_0001, :EDX , 21 , ""),
     :MMXEXT_       => (0x8000_0001, :EDX , 22 , "MMX-SSE (AMD specific)"),
     :MMX_          => (0x8000_0001, :EDX , 23 , "64bit Streaming SIMD extensions (MMX)"),
@@ -193,9 +193,9 @@ const __cpufeaturemap = Dict{Symbol, Tuple{UInt32, Symbol, UInt32, String}}(
     :EFRO          => (0x8000_0007, :EDX , 10 , "Read-only MPERF/APERF"),
     :PFI           => (0x8000_0007, :EDX , 11 , "Processor feedback interface"),
     :PA            => (0x8000_0007, :EDX , 12 , "Processor accumulator"),
-    :FP128         => (0x8000_001a, :EAX , 0  , "1x128 bit instead of 2x 64-bit processing (true SSE)"),
+    :FP128         => (0x8000_001a, :EAX , 0  , "1x128 bit instead of 2x 64-bit processing"),
     :MOVU          => (0x8000_001a, :EAX , 1  , "prefer unaligned MOV over MOVL/MOVH"),
-    :FP256         => (0x8000_001a, :EAX , 2  , "1x256 bit instead of 2x128-bit processing (true AVX)"),
+    :FP256         => (0x8000_001a, :EAX , 2  , "1x256 bit instead of 2x128-bit processing"),
 )
 
 
@@ -270,12 +270,12 @@ cpufeatures() = Symbol[f for f in keys(__cpufeaturemap) if cpufeature(f)] |> sor
 Generate a markdown table of all the detected/available/supported CPU features
 along with some textural description.
 """
-function cpufeaturetable()
-    md = "| `Cpuid` Flag | Feature Description |\n|:------|:------|\n"
+function cpufeaturetable() ::Base.Markdown.MD
+    tbl = Base.Markdown.Table([["Cpu Feature", "Description"]], [:l, :l])
     for f in cpufeatures()
-        md *= string( "| ", f, " | ", cpufeaturedesc(f), " |\n")
+        push!(tbl.rows, [string(f), cpufeaturedesc(f)])
     end
-    Base.Markdown.parse(md)
+    Base.Markdown.MD(tbl)
 end
 
 

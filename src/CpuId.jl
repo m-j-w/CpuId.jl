@@ -739,28 +739,52 @@ for diagnostic purposes e.g. in log files.
 """
 function cpuinfo()
 
-    # This code truly sucks...
+    unsupported = "Not supported by CPU"
+    cachesz = cachesize()
+    modelfl = cpumodel()
 
-    Base.Markdown.parse("""
-| `Cpuid` Property | Value                                          |
-|:-------------|:---------------------------------------------------|
-| Brand        | $(CpuId.cpubrand())                                |
-| Vendor       | $(CpuId.cpuvendor())                               |
-| Architecture | $(CpuId.cpuarchitecture())                         |
-| Model        | $(CpuId.cpumodel())                                |
-| Cores        | $(CpuId.cpucores()) physical cores, $(CpuId.cpucores_total()) logical cores (on executing CPU) |
-|              | $(CpuId.cpucores() == CpuId.cpucores_total() ? "No" : "") Hyperthreading detected  |
-| Address Size | $(CpuId.address_size()) bits virtual, $(CpuId.physical_address_size()) bits physical |
-| SIMD         | max. vector size: $(CpuId.simdbytes()) bytes = $(CpuId.simdbits()) bits    |
-| Data cache   | level $(1:length(CpuId.cachesize())) : $(map(x->div(x,1024), CpuId.cachesize())) kbytes |
-|              | $(CpuId.cachelinesize()) byte cache line size      | """ *
-    ( has_cpu_frequencies() ?
-"\n| Clock Freq.  | $(CpuId.cpu_base_frequency()) / $(CpuId.cpu_max_frequency()) MHz (base/max frequency) |
-|              | $(CpuId.cpu_bus_frequency()) MHz bus frequency     | " : "") *
-"\n| TSC       | Time Stamp Counter is " * (cpufeature(:TSC) ? "" : "not ") * "accessible by user code |" *
-"\n|           | " * (cpufeature(:TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :
-                                          "TSC increased at every clock cycle (non-invariant TSC)")* " |" *
-"\n| Hypervisor     |" * (CpuId.hypervised() ?  " Yes, $(CpuId.hvvendor()) " : " No ") * " |")
+    address = string(address_size(), " bits virtual, ", physical_address_size(), " bits physical")
+    cache   = string("Level ", 1:length(cachesz), " : ", map(x->div(x,1024), cachesz), " kbytes")
+    cachels = string(cachelinesize(), " byte cache line size")
+    cores = string( CpuId.cpucores(), " physical cores, "
+                  , CpuId.cpucores_total(), " logical cores (on executing CPU)")
+    frequencies = !has_cpu_frequencies() ? unsupported :
+                        string(cpu_base_frequency(), " / ", 
+                               cpu_max_frequency(), " MHz (base/max), ",
+                               cpu_bus_frequency(), " MHz bus")
+    hyperthreading = (CpuId.cpucores() == CpuId.cpucores_total() ?  "No " : "") * "Hyperthreading detected"
+    hypervisor = hypervised() ? "Yes, $(hvvendor())" : "No"
+    model = string("Family: ", modelfl[:Family], ", Model: ", modelfl[:Model],
+                   ", Stepping: ", modelfl[:Stepping], ", Type: ", modelfl[:CpuType])
+    simd = string(simdbits(), " bit = ", simdbytes(), " byte max. SIMD vector size" )
+    tsc = string("TSC is ", (cpufeature(:TSC) ? "" : "not "), "accessible via `rdtsc`")
+    tscinv = cpufeature(:TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :
+                                   "TSC increased at every clock cycle (non-invariant TSC)"
+    perfmon = !cpufeature(:PDCM) ? "Performance Monitoring Counters (PMC) are not supported" :
+                                   "Performance Monitoring Counters (PMC) available via `rdpmc`"
+    ibs = !cpufeature(:IBS) ? "Instruction Based Sampling (IBS) is not supported" :
+                              "CPU supports Instruction Based Sampling (IBS)"
+
+    Base.Markdown.MD( Base.Markdown.Table( [
+        [ "Cpu Property",       "Value"              ],
+        #----------------------------------------------
+        [ "Brand",              cpubrand()           ],
+        [ "Vendor",             cpuvendor()          ],
+        [ "Architecture",       cpuarchitecture()    ],
+        [ "Model",              model                ],
+        [ "Cores",              cores                ],
+        [ "",                   hyperthreading       ],
+        [ "Clock Frequencies",  frequencies          ],
+        [ "Data Cache",         cache                ],
+        [ "",                   cachels              ],
+        [ "Address Size",       address              ],
+        [ "SIMD",               simd                 ],
+        [ "Time Stamp Counter", tsc                  ],
+        [ "",                   tscinv               ],
+        [ "Perf. Monitoring",   perfmon              ],
+        [ "",                   ibs                  ],
+        [ "Hypervisor",         hypervisor           ],
+       ], [:l, :l] ) )
 end
 
 
