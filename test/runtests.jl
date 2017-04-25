@@ -55,13 +55,8 @@ using Base.Test
     @test isa( hypervised()           , Bool )
     @test isa( simdbits()             , Integer )
     @test isa( simdbytes()            , Integer )
-    if CpuId.hasleaf(0x0000_000b)
-        @test isa( cpucores()         , Integer )
-        @test isa( cpucores_total()   , Integer )
-    else
-        @test_throws ErrorException cpucores()
-        @test_throws ErrorException cpucores_total()
-    end
+    @test isa( cpucores()             , Integer )
+    @test isa( cpucores_total()       , Integer )
     @test isa( has_cpu_frequencies()  , Bool )
     @test isa( cpu_base_frequency()   , Integer )
     @test isa( cpu_bus_frequency()    , Integer )
