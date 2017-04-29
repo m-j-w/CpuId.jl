@@ -7,7 +7,7 @@ using Base.Test
     # Moved upwards temporarily for better diagnostics
     println(cpuinfo())
     println(cpufeaturetable())
-    println(hvversiontable())
+    println(hvinfo())
     println()
 
     # Can't do real testing on results when target machine is unknown.
@@ -17,12 +17,16 @@ using Base.Test
     @test isa( CpuId.cpuid(), NTuple{4, UInt32} )
     @test isa( CpuId.cpuid(0x00), NTuple{4, UInt32} )
     @test isa( CpuId.cpuid(0x00, 0x00), NTuple{4, UInt32} )
-    @test isa( CpuId.cpuid(0x00, 0x00, 0x00), NTuple{4, UInt32} )
-    @test isa( CpuId.cpuid(0x00, 0x00, 0x00, 0x00), NTuple{4, UInt32} )
-    @test isa( CpuId.cpuid(eax=0x00), NTuple{4, UInt32} )
-    @test isa( CpuId.cpuid(eax=0x00, ebx=0x00), NTuple{4, UInt32} )
-    @test isa( CpuId.cpuid(eax=0x00, ecx=0x00, edx=0x00), NTuple{4, UInt32} )
-    @test isa( CpuId.cpuid(eax=0x00, ebx=0x00, ecx=0x00, edx=0x00), NTuple{4, UInt32} )
+
+    # Test the low-level cpufeature querying function
+    @test isa( CpuId.cpufeature(CpuId.SSE)      , Bool )
+    @test isa( CpuId.cpufeature(:SSE)           , Bool )
+    @test isa( CpuId.cpufeaturedesc(:SSE)       , String )
+    @test isa( CpuId.cpufeatures()              , Vector{Symbol} )
+
+    @test_throws UndefVarError CpuId.cpufeature(:UNKNOWNFEATURE)
+    @test CpuId.cpufeaturedesc(:UNKNOWNFEATURE) ==
+                            "Unknown feature, no description available!"
 
     # LLVM eliminates calls to hasleaf(...) if the executing machine supports
     # that leaf.  Thus test whether the reverse actually throws...
@@ -63,27 +67,24 @@ using Base.Test
     @test isa( cpu_max_frequency()    , Integer )
     @test isa( cpuinfo()              , Base.Markdown.MD )
     @test isa( cpufeaturetable()      , Base.Markdown.MD )
-    @test isa( hvversiontable()       , Base.Markdown.MD )
+    @test isa( hvinfo()               , Base.Markdown.MD )
 
     @test isa( cpucycle()             , UInt64 )
     @test isa( cpucycle_id()          , Tuple{UInt64,UInt64} )
+
+    @test isa( perf_revision()        , Int )
+    @test isa( perf_gen_counters()    , Int )
+    @test isa( perf_gen_bits()        , Int )
+    @test isa( perf_fix_counters()    , Int )
+    @test isa( perf_fix_bits()        , Int )
 
     # Check if trailing null characters are correctly identified
     # as hypervisor vendor KVM
     @test get( CpuId._cpuid_vendor_id, "KVMKVMKVM\0\0\0", :Unknown) === :KVM
 
-    # Accessing `rdtsc` and `rdtscp` gives a low-level exception, crashing
-    # Julia, and thus cannot be tested if not available.
-    #if (CpuId.cpufeature(:TSC) == false)
-    #    @test_throws Exception CpuId.CpuInstructions.rdtsc()
-    #end
-    #if (CpuId.cpufeature(:RDTSCP) == false)
-    #    @test_throws Exception CpuId.CpuInstructions.rdtscp()
-    #end
-
     # If we're on Linux, then also dump /proc/cpuinfo for comparison when on a
-    # remote CI.
-    is_linux() && run(`cat /proc/cpuinfo`)
+    # remote CI, but only print data of the first CPU.
+    is_linux() && run(`sed -e '/^$/,$d' /proc/cpuinfo`)
 
 end
 
@@ -101,7 +102,11 @@ dump_cpuid_table() ; flush(STDOUT) ; flush(STDERR)
         eval(quote
             @testset "Mocked #$($i) $(strip(cpubrand()))" begin
                 flush(STDOUT) ; flush(STDERR)
-                @test isa( cpubrand(), String )
+                @test isa( cpubrand()       , String )
+                @test isa( cpuinfo()        , Base.Markdown.MD )
+                @test isa( cpufeaturetable(), Base.Markdown.MD )
+                @test isa( hvinfo()         , Base.Markdown.MD )
+                println("Tested recorded cpuid table #",$i," for '", strip(cpubrand()), "'")
             end
         end)
         flush(STDOUT) ; flush(STDERR)

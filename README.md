@@ -57,6 +57,15 @@ Or, if you're keen to get some intermediate updates, clone from GitHub
     Julia> Pkg.clone("https://github.com/m-j-w/CpuId.jl")
 
 
+For practical examples on how *CpuId* could be used in production, see the
+follow-up package [CpuHints.jl](https://github.com/m-j-w/CpuHints.jl) which
+aims at improving benchmarking accuracy by giving the CPU hints on when to load
+and store from and to caches.  Further, see the package
+[Perf.jl](https://github.com/m-j-w/Perf.jl) which is in an early development
+stage but aims at bringing Linux performance monitoring capabilities aka 'perf'
+to Julia.
+
+
 ## Features
 
 See the diagnostic summary on your CPU by typing
@@ -66,7 +75,7 @@ julia> using CpuId
 julia> cpuinfo()
 
    Cpu Property         Value
-  ╾───────────────────╌────────────────────────────────────────────────────────────╼
+  ╾───────────────────╌───────────────────────────────────────────────────────────╼
    Brand                Intel(R) Xeon(R) CPU E3-1225 v5 @ 3.30GHz
    Vendor               :Intel
    Architecture         :Skylake
@@ -80,8 +89,10 @@ julia> cpuinfo()
    SIMD                 256 bit = 32 byte max. SIMD vector size
    Time Stamp Counter   TSC is accessible via `rdtsc`
                         TSC runs at constant rate (invariant from clock frequency)
-   Perf. Monitoring     Performance Monitoring Counters (PMC) available via `rdpmc`
-                        Instruction Based Sampling (IBS) is not supported
+   Perf. Monitoring     Performance Monitoring Counters (PMC) revision 4
+                        Available hardware counters per logical core:
+                        3 fixed-function counters of 48 bit width
+                        8 general-purpose counters of 48 bit width
    Hypervisor           No
 ```
 
@@ -108,9 +119,13 @@ This release covers a selection of fundamental and higher level functionality:
      running the operating system, aka a virtual machine.  In that case,
      `hvvendor()` may be invoked to get the, well, hypervisor vendor, and
      `hvversion()` returns a dictionary of additional version tags.
-     `hvversiontable()` generates a markdown summary of same dictionary.
+     `hvinfo()` generates a markdown summary of same dictionary.
  - `simdbits()` and `simdbytes()` return the size of the largest SIMD register
      available on the executing CPU.
+ - `perf_revision()` to query the revision number of hardware performance
+     monitoring counters, along with `perf_fix_counters()`, `perf_gen_counters()`,
+     `perf_fix_bits()`, `perf_gen_bits()` to determine the number and bit width
+     of available fixed-function and general purpose counters per logical core.
  - `cpucycle()` and `cpucycle_id()` let you directly get the CPU's time stamp
      counter, which is increased for every CPU clock cycle. This is a method to
      perform low overhead micro-benchmarking; though, technically, this uses the
@@ -155,10 +170,9 @@ still evolves with every CPU generation.  Thus, not all information is available
 on every CPU model, and certainly everything is vendor dependent.
 
 This Julia package also provides the `cpucycle()` function which allows getting
-the currently time stamp counter (TSC), which is determined by emitting
-a `rdtsc` instruction.  Similarly to `cpuid`, it only requires CPU registers and
-is thus, if inlined, probably the lowest overhead method to perform
-micro-benchmarking.
+the current time stamp counter (TSC), which is determined by emitting a `rdtsc`
+instruction.  Similarly to `cpuid`, it only requires CPU registers and is thus,
+if inlined, probably the lowest overhead method to perform micro-benchmarking.
 
 
 ## Limitations

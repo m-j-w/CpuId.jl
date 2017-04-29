@@ -1,5 +1,7 @@
 #=--- CpuId / CpuInstructions.jl ------------------------------------------=#
 
+__precompile__()
+
 """
 # Module 'CpuInstructions'
 
@@ -18,13 +20,13 @@ export cpuid, rdtsc, rdtscp
 using Base: llvmcall
 
 """
-    cpuid(eax, ebx, ecx, edx)
+    cpuid( [leaf], [subleaf]) ::NTuple{4, UInt32}
 
 Invoke the cpu's hardware instruction `cpuid` with the values of the arguments
-stored as registers EAX, EBX, ECX, EDX, respectively. Returns a tuple
-of the response of same registers.  Input values may be given as individaul
-`UInt32` arguments, or as a tuple of the same.  Unspecified arguments are
-assumed zero.
+stored as registers *EAX = leaf*, *ECX = subleaf*, respectively. Returns a
+tuple of the response of registers EAX, EBX, ECX, EDX.  Input values may be
+given as individual `UInt32` arguments, or converted from any `Integer`.
+Unspecified arguments are assumed zero.
 
 This function is primarily intended as a low-level interface to the CPU.
 
@@ -33,34 +35,33 @@ Note: Expected to work on all CPUs that implement the assembly instruction
 """
 function cpuid end
 
-@inline cpuid(eax, ebx = 0, ecx = 0, edx = 0) = cpuid(map(UInt32, (eax, ebx, ecx, edx)))
-@inline cpuid(;eax = 0, ebx = 0, ecx = 0, edx = 0) = cpuid(eax, ebx, ecx, edx)
+# Convenience function allowing passing other than UInt32 values
+@inline cpuid( leaf   ::Integer=zero(UInt32)
+             , subleaf::Integer=zero(UInt32)) = cpuid(UInt32(leaf), UInt32(subleaf))
 
-# Variant for input registers provided as a 4-tuple
-@inline cpuid(exx::Tuple{UInt32,UInt32,UInt32,UInt32}) =
+# Low level cpuid call, taking eax=leaf and ecx=subleaf,
+# returning eax, ebx, ecx, edx as NTuple(4,UInt32)
+@inline cpuid(leaf::UInt32, subleaf::UInt32) =
     llvmcall("""
-        ; load the values from the tuple
-        %2 = extractvalue [4 x i32] %0, 0
-        %3 = extractvalue [4 x i32] %0, 1
-        %4 = extractvalue [4 x i32] %0, 2
-        %5 = extractvalue [4 x i32] %0, 3
-        ; call 'cpuid' with those pointers being loaded into registers EAX, EBX, ECX, EDX
-        %6 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,1,2,3,~{dirflag},~{fpsr},~{flags}"(i32 %2, i32 %3, i32 %4, i32 %5) #7
+        ; leaf = %0, subleaf = %1, %2 is some label
+        ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
+        %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid",
+             "={ax},={bx},={cx},={dx},{ax},{cx},~{dirflag},~{fpsr},~{flags}"
+             (i32 %0, i32 %1) #2
         ; retrieve the result values and convert to vector [4 x i32]
-        %7  = extractvalue { i32, i32, i32, i32 } %6, 0
-        %8  = extractvalue { i32, i32, i32, i32 } %6, 1
-        %9  = extractvalue { i32, i32, i32, i32 } %6, 2
-        %10 = extractvalue { i32, i32, i32, i32 } %6, 3
+        %4 = extractvalue { i32, i32, i32, i32 } %3, 0
+        %5 = extractvalue { i32, i32, i32, i32 } %3, 1
+        %6 = extractvalue { i32, i32, i32, i32 } %3, 2
+        %7 = extractvalue { i32, i32, i32, i32 } %3, 3
         ; return the values as a new tuple
-        %11 = insertvalue [4 x i32] undef, i32  %7, 0
-        %12 = insertvalue [4 x i32]  %11 , i32  %8, 1
-        %13 = insertvalue [4 x i32]  %12 , i32  %9, 2
-        %14 = insertvalue [4 x i32]  %13 , i32 %10, 3
-        ret [4 x i32] %14"""
+        %8  = insertvalue [4 x i32] undef, i32 %4, 0
+        %9  = insertvalue [4 x i32]   %8 , i32 %5, 1
+        %10 = insertvalue [4 x i32]   %9 , i32 %6, 2
+        %11 = insertvalue [4 x i32]  %10 , i32 %7, 3
+        ret [4 x i32] %11"""
     # llvmcall requires actual types, rather than the usual (...) tuple
-    , NTuple{4,UInt32}, Tuple{NTuple{4,UInt32}}
-    , exx)
-
+    , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
+    , leaf, subleaf)
 
 @inline rdtsc() =
     llvmcall("""
