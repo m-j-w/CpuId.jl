@@ -1,7 +1,7 @@
 # CPU, what can you do?
 
 *CpuId* is a package for the Julia programming language that enables you to
-query the availability of specific CPU features with minimal run-time cost
+query the availability of specific CPU features with low run-time cost
 using the assembly instruction `cpuid`.
 
 [![Build Status](https://travis-ci.org/m-j-w/CpuId.jl.svg?branch=master)](https://travis-ci.org/m-j-w/CpuId.jl)
@@ -13,7 +13,9 @@ _Status: considered a pre-beta version, ready for you to try out._
 [![CpuId](http://pkg.julialang.org/badges/CpuId_0.5.svg)](http://pkg.julialang.org/?pkg=CpuId)
 [![CpuId](http://pkg.julialang.org/badges/CpuId_0.6.svg)](http://pkg.julialang.org/?pkg=CpuId)
 
-Works on Julia 0.5 and 0.6, on Linux, Mac and Windows with Intel compatible CPUs.
+Works on Julia 0.5 and 0.6, on Linux, Mac and Windows with Intel CPUs;
+support for AMD CPUs is in preparation.  Note: Julia-0.7 master currently
+segfaults due to an issue with the new inliner.
 
 
 ## Motivation
@@ -26,17 +28,13 @@ machine (hypervisor), or to determine the size of the largest SIMD registers
 available to choose the best algorithm for the current hardware.
 
 This information is obtained by directly querying the CPU through the `cpuid`
-assembly instruction which operates only using CPU register.  In fact,
-determining simple boolean feature flags through `cpuid` can be even faster
-than accessing a global variable in Julia, in particular if caches are cold.
-Also, this provides a portable way to adapt code to unknown hardware if Julia
-code is compiled into a static system image (sysimg), where constant globals are
-not an option.
+assembly instruction which operates only using CPU registers, and provides
+a portable way to adapt code to specific hardware.
 
 Same information may of course be collected from various sources, from Julia
 itself or from the operating system, e.g. on Linux from `/proc/cpuinfo`.  See
 below for a few [alternatives](#alternatives).  However, the `cpuid` instruction
-is perfectly portable and highly efficient.
+is portable in the sense that it doesn't rely on other external dependencies.
 
 The full documentation is found in Intel's 4670 page combined [Architectures
 Software Devleoper Manual](
@@ -55,18 +53,6 @@ Or, if you're keen to get some intermediate updates, clone from GitHub
 [master branch](https://github.com/m-j-w/CpuId.jl/tree/master):
 
     Julia> Pkg.clone("https://github.com/m-j-w/CpuId.jl")
-
-
-For practical examples on how *CpuId* could be used in production, see the
-follow-up package [CpuHints.jl](https://github.com/m-j-w/CpuHints.jl) which
-aims at improving benchmarking accuracy by giving the CPU hints on when to load
-and store from and to caches.  Further, see the package
-[Perf.jl](https://github.com/m-j-w/Perf.jl) which is in an early development
-stage but aims at bringing Linux performance monitoring capabilities aka 'perf'
-to Julia.
-
-
-## Features
 
 See the diagnostic summary on your CPU by typing
 
@@ -95,6 +81,32 @@ julia> cpuinfo()
                         8 general-purpose counters of 48 bit width
    Hypervisor           No
 ```
+
+Or get a list of the feature flags of your CPU with
+```
+julia> cpufeaturetable()
+
+   Cpu Feature   Description
+  ╾────────────╌───────────────────────────────────────────────────────────────╼
+   3DNowP        3D Now PREFETCH and PREFETCHW instructions
+   ACPI          Thermal monitor and software controlled clock facilities (MSR)
+   ADX           Intel ADX (Multi-Precision Add-Carry Instruction Extensions)
+   AES           AES encryption instruction set
+   AHF64         LAHF and SAHF in PM64
+   APIC          APIC on-chip (Advanced Programmable Interrupt Controller)
+   AVX           256bit Advanced Vector Extensions, AVX
+   AVX2          SIMD 256bit Advanced Vector Extensions 2
+   BMI1          Bit Manipulation Instruction Set 1
+   BMI2          Bit Manipulation Instruction Set 2
+   CLFLUSH       CLFLUSHOPT Instructions
+   CLFSH         CLFLUSH instruction (SSE2)
+   CMOV          Conditional move CMOV and FCMOV instructions
+   CX16          CMPXCHG16B instruction
+   CX8           CMPXCHG8 instruction (64bit compare and exchange)
+   ...
+```
+
+## Features
 
 This release covers a selection of fundamental and higher level functionality:
 
@@ -132,30 +144,8 @@ This release covers a selection of fundamental and higher level functionality:
      `rdtsc` and `rdtscp` instructions rather than `cpuid`.
  - `cpufeature(::Symbol)` permits asking for the availability of a specific
      feature, and `cpufeaturetable()` gives a complete overview of all detected
-     features with a brief explanation, as shown below.
+     features with a brief explanation, as shown above.
 
-```
-julia> cpufeaturetable()
-
-   Cpu Feature   Description
-  ╾────────────╌───────────────────────────────────────────────────────────────╼
-   3DNowP        3D Now PREFETCH and PREFETCHW instructions
-   ACPI          Thermal monitor and software controlled clock facilities (MSR)
-   ADX           Intel ADX (Multi-Precision Add-Carry Instruction Extensions)
-   AES           AES encryption instruction set
-   AHF64         LAHF and SAHF in PM64
-   APIC          APIC on-chip (Advanced Programmable Interrupt Controller)
-   AVX           256bit Advanced Vector Extensions, AVX
-   AVX2          SIMD 256bit Advanced Vector Extensions 2
-   BMI1          Bit Manipulation Instruction Set 1
-   BMI2          Bit Manipulation Instruction Set 2
-   CLFLUSH       CLFLUSHOPT Instructions
-   CLFSH         CLFLUSH instruction (SSE2)
-   CMOV          Conditional move CMOV and FCMOV instructions
-   CX16          CMPXCHG16B instruction
-   CX8           CMPXCHG8 instruction (64bit compare and exchange)
-   ...
-```
 
 ## Background
 
@@ -165,14 +155,14 @@ integer fields and strings, all packed in the returned CPU registers EAX, EBX,
 ECX and EDX. Which information is returned is determined by the so called leaf,
 which is defined by setting the input register EAX to a specific 32 bit integer
 value before executing the instruction.  The extent and kind of information
-obtainable via this facility has changed quite a lot over the past decade and
+obtainable via this instruction has changed quite a lot over the past decade and
 still evolves with every CPU generation.  Thus, not all information is available
 on every CPU model, and certainly everything is vendor dependent.
 
 This Julia package also provides the `cpucycle()` function which allows getting
-the current time stamp counter (TSC), which is determined by emitting a `rdtsc`
-instruction.  Similarly to `cpuid`, it only requires CPU registers and is thus,
-if inlined, probably the lowest overhead method to perform micro-benchmarking.
+the current time stamp counter (TSC) by emitting a `rdtsc` instruction.
+Similarly to `cpuid`, it only requires CPU registers and is usable in user-land
+code and facilitates an alternative approach to micro-benchmarking.
 
 
 ## Limitations
@@ -188,20 +178,9 @@ Moreover, the `cpuid` instruction can only provide information for the executing
 physical CPU, called a package.  To obtain information on all packages, and all
 physical and logical cores, the executing program must be pinned sequentially to
 each and every core, and gather its properties. This is how `libuv`, `hwloc` or
-the operating system obtain that kind information.
-
-In most situations, this is not really required.  Even on machines with multiple
-CPUs, the CPUs are typically of the same model.  Furthermore, it is in most
-cases only relevant for the currently running process whether that it is
-sharing its cache, rather than knowing all the details about other CPUs in the
-machine.
-
-Finally, quite a bit of the really interesting information that the CPU collects
-is stored in the so called machine specific registers (MSR) or control registers
-(CR), which require special 'ring 0' program execution privileges, and which are
-not available through the `cpuid` instruction.  For instance the actual CPU
-clock frequencies are stored there.Typically, only the kernel and root have
-these privileges, but not normal user processes and threads.
+the operating system obtain that kind information.  However, this would require
+additional external or operating system dependent code which is not the scope of
+this package.
 
 #### Specific limitations
 
@@ -217,25 +196,24 @@ these privileges, but not normal user processes and threads.
     [alternatives](#alternatives), in particular the Linux command line tool
     *cpuid*.
 
+- When running a hypervisor (virtual machine) the presented information is wrong!
+    Hypervisor vendors are free to provide the `cpuid` information
+    by intercepting calls to that instruction.  Not all vendors comply, and some
+    even permit the user to change what is reported.  Thus, expect some
+    surprises when a hypervisor is detected.
+
 - My hypervisor is not detected!
     Either you're not really running a hypervisor, e.g. *Bash on Windows* is
     _not_ a virtual machine, or there is a feature missing. Raise an issue on
     GitHub.
 
-- When running a hypervisor the presented information is wrong!
-    Yeah, well, hypervisor vendors are free to provide the `cpuid` information
-    by intercepting calls to that instruction.  Not all vendors comply, and some
-    even permit the user to change what is reported.  Thus, expect some
-    surprises when a hypervisor is detected.
-
 - `cpucycles()` invokes `rdtsc`; that is not `cpuid`!
-    True, but who cares. Both are valuable when diagnosing performance issues
-    and trying to perform micro benchmarks based on specific hardware features.
+    True. However, both are valuable when diagnosing performance issues
+    and trying to perform micro benchmarks on specific hardware.
 
 
 ## Alternatives
 
-**Production-ready alternatives:**
 On Linux, most of the information may be obtained by reading from the `/proc`
 tree, in particular `/proc/cpuinfo`, which eventually also invokes the `cpuid`
 instruction.  Type `man 4 cpuid` to get a brief description of this kernel
@@ -262,22 +240,6 @@ it also pulls in additional external binary dependencies in that it relies on
 computational overhead. Whether this is an issue in the first place depends much
 on your use-case.
 
-**The difference:**
-
-*CpuId* takes a different approach in that it talks directly to the CPU. For
-instance, asking the CPU for its number of cores or whether it supports AVX2 can
-be achieved in probably 250..500 CPU cycles, thanks to Julia's JIT-compilation
-approach and inlining. For comparison, 100..200 CPU cycles is roughly loading
-one integer from main memory, or one or two integer divisions.  Calling any
-external library function is at least one order more cycles. This allows moving
-such feature checks much closer or even directly in a hot zone (which, however,
-might also hint towards a questionable coding pattern).  Also, *CpuId* gives
-additional feature checks, such as whether your executing on a virtual machine,
-which again may or may not influence how you set up your high performance
-computing tasks in a more general way.  Finally, the `cpuid(...)` function
-exposes this low-level interface to the users, enabling them to make equally
-fast and reliable run-time feature checks on new or other hardware.
-
 
 ## Terms of usage
 
@@ -287,7 +249,6 @@ This Julia package *CpuId* is published as open source and licensed under the
 
 **Contributions welcome!**
 
-Show that you like this package by giving it a GitHub star. Thanks!  You're also
-highly welcome to report successful usage or any issues via GitHub, and to open
+You're welcome to report successful usage or any issues via GitHub, and to open
 pull requests to extend the current functionality.
 
