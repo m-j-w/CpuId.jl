@@ -12,10 +12,10 @@ _Status: considered a pre-beta version, ready for you to try out._
 
 [![CpuId](http://pkg.julialang.org/badges/CpuId_0.5.svg)](http://pkg.julialang.org/?pkg=CpuId)
 [![CpuId](http://pkg.julialang.org/badges/CpuId_0.6.svg)](http://pkg.julialang.org/?pkg=CpuId)
+[![CpuId](http://pkg.julialang.org/badges/CpuId_0.7.svg)](http://pkg.julialang.org/?pkg=CpuId)
 
 Works on Julia 0.5 and 0.6, on Linux, Mac and Windows with Intel CPUs;
-support for AMD CPUs is in preparation.  Note: Julia-0.7 master currently
-segfaults due to an issue with the new inliner.
+support for AMD CPUs is in preparation.
 
 
 ## Motivation
