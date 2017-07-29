@@ -1,7 +1,5 @@
 #=--- CpuId / CpuInstructions.jl ------------------------------------------=#
 
-__precompile__()
-
 """
 # Module 'CpuInstructions'
 
