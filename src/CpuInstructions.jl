@@ -80,7 +80,7 @@ end
     , UInt64, Tuple{})
 
 
-@inline rdtscp() =
+@noinline rdtscp() =
     llvmcall("""
         %1 = tail call { i32, i32, i32 } asm sideeffect "rdtscp", "={ax},={dx},={cx},~{dirflag},~{fpsr},~{flags}"() #2
         %2 = extractvalue { i32, i32, i32 } %1, 0

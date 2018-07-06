@@ -725,7 +725,9 @@ function __datacachesize(eax::UInt32, ebx::UInt32, ecx::UInt32) ::UInt32
 end
 
 
-function cachesize()
+@noinline function cachesize()
+
+    # TODO: This function fails compilation if inlined.
 
     function cachesize_level(leaf, sl::UInt32)
         eax, ebx, ecx, edx = cpuid(leaf, sl)
