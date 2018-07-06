@@ -33,6 +33,16 @@ Note: Expected to work on all CPUs that implement the assembly instruction
 """
 function cpuid end
 
+# Convenience function allowing passing other than UInt32 values
+cpuid( leaf::Integer=zero(UInt32)
+             , subleaf::Integer=zero(UInt32)) = cpuid(UInt32(leaf), UInt32(subleaf))
+
+#
+#   TODO:
+#   The following llvmcall routines fail when being inlined!
+#   Hence the @noinline.
+#
+
 # Low level cpuid call, taking eax=leaf and ecx=subleaf,
 # returning eax, ebx, ecx, edx as NTuple(4,UInt32)
 @noinline cpuid_llvm(leaf::UInt32, subleaf::UInt32) =
