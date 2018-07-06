@@ -332,9 +332,9 @@ function cpubrand() ::String
     hasleaf(leaf) || _throw_unsupported_leaf(leaf)
 
     # Extract the information from leaf 0x8000_0002..0x8000_0004
-    String( reinterpret(UInt8,
-            [cpuid(0x8000_0002)..., cpuid(0x8000_0003)..., cpuid(0x8000_0004)..., 0x0000_0000] )
-    )
+    rstrip( String( reinterpret(UInt8,
+                    [cpuid(0x8000_0002)..., cpuid(0x8000_0003)..., cpuid(0x8000_0004)..., 0x0000_0000] )
+          , '\0')
 end
 
 
