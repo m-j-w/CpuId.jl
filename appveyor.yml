@@ -28,6 +28,7 @@ install:
 build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
+  - pwd
   - C:\projects\julia\bin\julia --depwarn=no -e "import InteractiveUtils; versioninfo();
       import Pkg; Pkg.clone(pwd(), \"CpuId\"); Pkg.build(\"CpuId\")"
 
