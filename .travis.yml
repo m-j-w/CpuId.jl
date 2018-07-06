@@ -12,7 +12,7 @@ notifications:
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - pwd
-  - julia --depwarn=no -e 'import Pkg; Pkg.clone(pwd()); Pkg.build("CpuId"); Pkg.test("CpuId"; coverage=true)'
+  - julia --depwarn=no -e 'import Pkg; Pkg.clone(pwd(), \"CpuId\"); Pkg.build("CpuId"); Pkg.test("CpuId"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
   #- julia -e 'cd(Pkg.dir("CpuId")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
