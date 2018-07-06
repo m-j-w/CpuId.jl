@@ -4,6 +4,8 @@
 query the availability of specific CPU features with low run-time cost
 using the assembly instruction `cpuid`.
 
+Test                     | Status
+-------------------------|----------------------
 Windows 32/64 bit Build | [![Build Status](https://ci.appveyor.com/api/projects/status/q34wl2a441dy87gy?svg=true)](https://ci.appveyor.com/project/m-j-w/cpuid-jl)
 -------------------------|----------------------
  Linux and Mac Build     | [![Build Status](https://travis-ci.org/m-j-w/CpuId.jl.svg?branch=master)](https://travis-ci.org/m-j-w/CpuId.jl)
