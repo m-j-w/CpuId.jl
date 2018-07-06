@@ -9,7 +9,7 @@ using the assembly instruction `cpuid`.
 +-------------------------+----------------------+
 | Linux and Mac Build     | [![Build Status](https://travis-ci.org/m-j-w/CpuId.jl.svg?branch=master)](https://travis-ci.org/m-j-w/CpuId.jl)           |
 +-------------------------+----------------------+
-| Julia Metadata Tests    | [![CpuId](http://pkg.julialang.org/badges/CpuId_0.7.svg)](http://pkg.julialang.org/?pkg=CpuId)
+| Julia Metadata Tests    | [![CpuId](http://pkg.julialang.org/badges/CpuId_0.7.svg)](http://pkg.julialang.org/?pkg=CpuId) |
 +-------------------------+----------------------+
 | Code Coverage           | [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/m-j-w/CpuId.jl)           |
 +-------------------------+----------------------+
