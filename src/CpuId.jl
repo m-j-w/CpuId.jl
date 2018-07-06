@@ -334,6 +334,7 @@ function cpubrand() ::String
     # Extract the information from leaf 0x8000_0002..0x8000_0004
     rstrip( String( reinterpret(UInt8,
                     [cpuid(0x8000_0002)..., cpuid(0x8000_0003)..., cpuid(0x8000_0004)..., 0x0000_0000] )
+                  )
           , '\0')
 end
 
