@@ -36,7 +36,7 @@ using .CpuInstructions: cpuid, rdtsc, rdtscp
 Helper function, tagged noinline to not have detrimental effect on performance.
 """
 @noinline _throw_unsupported_leaf(leaf) =
-    error("This CPU does not provide information on cpuid leaf 0x$(string(leaf, base=16, pad=8).")
+    error("This CPU does not provide information on cpuid leaf 0x$(string(leaf, base=16, pad=8)).")
 
 """
 Helper function, not preventing getting a pointer from an immutable.
