@@ -2,10 +2,8 @@ environment:
   matrix:
   - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x86/julia-latest-win32.exe"
   - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x64/julia-latest-win64.exe"
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.6/julia-0.6-latest-win32.exe"
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
+#  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.6/julia-0.6-latest-win32.exe"
+#  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
 
 branches:
   only:
@@ -30,8 +28,9 @@ install:
 build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
-  - C:\projects\julia\bin\julia -e "versioninfo();
-      Pkg.clone(pwd(), \"CpuId\"); Pkg.build(\"CpuId\")"
+  - pwd
+  - C:\projects\julia\bin\julia --depwarn=no -e "import InteractiveUtils; versioninfo();
+      import Pkg; Pkg.clone(pwd(), \"CpuId\"); Pkg.build(\"CpuId\")"
 
 test_script:
-  - C:\projects\julia\bin\julia -e "Pkg.test(\"CpuId\")"
+  - C:\projects\julia\bin\julia --depwarn=no -e "import Pkg; Pkg.test(\"CpuId\")"

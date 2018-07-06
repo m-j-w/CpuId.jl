@@ -1,4 +1,4 @@
-using Base.Test
+using Test
 
 @testset "ReturnTypes" begin
 
@@ -65,9 +65,9 @@ using Base.Test
     @test isa( cpu_base_frequency()   , Integer )
     @test isa( cpu_bus_frequency()    , Integer )
     @test isa( cpu_max_frequency()    , Integer )
-    @test isa( cpuinfo()              , Base.Markdown.MD )
-    @test isa( cpufeaturetable()      , Base.Markdown.MD )
-    @test isa( hvinfo()               , Base.Markdown.MD )
+    @test isa( cpuinfo()              , Markdown.MD )
+    @test isa( cpufeaturetable()      , Markdown.MD )
+    @test isa( hvinfo()               , Markdown.MD )
 
     @test isa( cpucycle()             , UInt64 )
     @test isa( cpucycle_id()          , Tuple{UInt64,UInt64} )
@@ -84,15 +84,18 @@ using Base.Test
 
     # If we're on Linux, then also dump /proc/cpuinfo for comparison when on a
     # remote CI, but only print data of the first CPU.
-    is_linux() && run(`sed -e '/^$/,$d' /proc/cpuinfo`)
+    Sys.islinux() && run(`sed -e '/^$/,$d' /proc/cpuinfo`)
 
 end
+
+print("\n\n-----\nMocking CpuId\n-----\n\n")
+flush(stdout) ; flush(stderr)
 
 include("mock.jl")
 include("mockdb.jl")
 
 # Dump the cpuid table of the executing CPU
-dump_cpuid_table() ; flush(STDOUT) ; flush(STDERR)
+dump_cpuid_table() ; flush(stdout) ; flush(stderr)
 
 # Run the known cpuid records
 @testset "Mocking" begin
@@ -101,14 +104,14 @@ dump_cpuid_table() ; flush(STDOUT) ; flush(STDERR)
         mock_cpuid(i)
         eval(quote
             @testset "Mocked #$($i) $(strip(cpubrand()))" begin
-                flush(STDOUT) ; flush(STDERR)
+                flush(stdout) ; flush(stderr)
                 @test isa( cpubrand()       , String )
-                @test isa( cpuinfo()        , Base.Markdown.MD )
-                @test isa( cpufeaturetable(), Base.Markdown.MD )
-                @test isa( hvinfo()         , Base.Markdown.MD )
+                @test isa( cpuinfo()        , Markdown.MD )
+                @test isa( cpufeaturetable(), Markdown.MD )
+                @test isa( hvinfo()         , Markdown.MD )
                 println("Tested recorded cpuid table #",$i," for '", strip(cpubrand()), "'")
             end
         end)
-        flush(STDOUT) ; flush(STDERR)
+        flush(stdout) ; flush(stderr)
     end
 end

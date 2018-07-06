@@ -34,12 +34,18 @@ Note: Expected to work on all CPUs that implement the assembly instruction
 function cpuid end
 
 # Convenience function allowing passing other than UInt32 values
-@inline cpuid( leaf   ::Integer=zero(UInt32)
+cpuid( leaf   ::Integer=zero(UInt32)
              , subleaf::Integer=zero(UInt32)) = cpuid(UInt32(leaf), UInt32(subleaf))
+
+#
+#   TODO:
+#   The following llvmcall routines fail when being inlined!
+#   Hence the @noinline.
+#
 
 # Low level cpuid call, taking eax=leaf and ecx=subleaf,
 # returning eax, ebx, ecx, edx as NTuple(4,UInt32)
-@inline cpuid(leaf::UInt32, subleaf::UInt32) =
+@noinline cpuid(leaf::UInt32, subleaf::UInt32) =
     llvmcall("""
         ; leaf = %0, subleaf = %1, %2 is some label
         ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
@@ -61,7 +67,7 @@ function cpuid end
     , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
     , leaf, subleaf)
 
-@inline rdtsc() =
+@noinline rdtsc() =
     llvmcall("""
         %1 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() #2
         %2 = extractvalue { i32, i32 } %1, 0
@@ -75,7 +81,7 @@ function cpuid end
     , UInt64, Tuple{})
 
 
-@inline rdtscp() =
+@noinline rdtscp() =
     llvmcall("""
         %1 = tail call { i64, i64, i64 } asm sideeffect "rdtscp", "={ax},={dx},={cx},~{dirflag},~{fpsr},~{flags}"() #2
         %2 = extractvalue { i64, i64, i64 } %1, 0

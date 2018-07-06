@@ -5,10 +5,8 @@
 # These dumps are used to test the analysis function of CpuId.jl.
 #
 
-using CpuId
-
-import CpuId: cpuid
-
+import CpuId
+import CpuId.CpuInstructions
 
 """
 Entry for mocking `cpuid`, maps input and output of the `cpuid` instruction
@@ -40,7 +38,7 @@ function mock_cpuid(idx::Integer)
         get( _mockdb[idx], (UInt32(eax), UInt32(ecx))
            , (zero(UInt32), zero(UInt32), zero(UInt32), zero(UInt32),) )
 
-    CpuId.cpuid(eax::UInt32, ecx::UInt32) = _fake_cpuid(eax, ecx)
+    CpuInstructions.eval( :(cpuid(eax::UInt32, ecx::UInt32) = $_fake_cpuid(eax, ecx) ) )
 end
 
 
