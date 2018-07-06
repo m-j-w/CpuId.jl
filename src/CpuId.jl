@@ -17,6 +17,9 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        cpufeaturetable, cpuarchitecture
 
 using Markdown: MD
+const MarkdownString = MD              # Rename Markdown constructors
+const MarkdownTable = Markdown.Table   # to avoid deprecation warning in 0.7-beta
+const parse_markdown = Markdown.parse
 
 # Particular feature flag query is also externalized due to largeness of dicts.
 include("cpufeature.jl")
@@ -245,7 +248,7 @@ end
 
 
 """
-    hvinfo() ::Markdown.MD
+    hvinfo() ::MarkdownString
 
 Generate a markdown table of all the detected/available/supported tags of a
 running hypervisor.  If there is no hosting hypervisor, an empty markdown
@@ -253,7 +256,7 @@ string is returned.
 """
 function hvinfo()
     d = hvversion()
-    isempty(d) && return Markdown.MD()
+    isempty(d) && return MarkdownString()
 
     md = "| Hypervisor | Value |\n|:------|:------|\n"
 
@@ -273,7 +276,7 @@ function hvinfo()
         (md *= string( "| Frequencies | TSC = ", d[:tscfreq] ÷ 1000,
                        " MHz, bus = ", d[:busfreq] ÷ 1000, " MHz |\n"))
 
-    Markdown.parse(md)
+    parse_markdown(md)
 end
 
 
@@ -906,7 +909,7 @@ function cpuinfo()
         , ["", "$(perf_gen_counters()) general-purpose counters of $(perf_gen_bits()) bit width"] ]
     ibs = !cpufeature(IBS) ? [] : [["", "CPU supports AMD's Instruction Based Sampling (IBS)"]]
 
-    Markdown.MD( Markdown.Table( [
+    MarkdownString( MarkdownTable( [
         [ "Cpu Property",       "Value"              ],
         #----------------------------------------------
         [ "Brand",              strip(cpubrand())    ],

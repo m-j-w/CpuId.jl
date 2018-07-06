@@ -411,17 +411,17 @@ cpufeatures() = Symbol[f for f in keys(CpuFeatureDescription) if cpufeature(eval
 
 
 """
-    cpufeaturetable() ::Markdown.MD
+    cpufeaturetable() ::MarkdownString
 
 Generate a markdown table of all the detected/available/supported CPU features
 along with some textural description.
 """
-function cpufeaturetable() ::Markdown.MD
-    tbl = Markdown.Table([["Cpu Feature", "Description"]], [:l, :l])
+function cpufeaturetable() ::MarkdownString
+    tbl = MarkdownTable([["Cpu Feature", "Description"]], [:l, :l])
     for f in cpufeatures()
         push!(tbl.rows, [string(f), cpufeaturedesc(f)])
     end
-    Markdown.MD(tbl)
+    MarkdownString(tbl)
 end
 
 
