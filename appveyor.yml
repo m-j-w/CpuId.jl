@@ -32,4 +32,4 @@ build_script:
       Pkg.clone(pwd(), \"CpuId\"); Pkg.build(\"CpuId\")"
 
 test_script:
-  - C:\projects\julia\bin\julia -e "Pkg.test(\"CpuId\")"
+  - C:\projects\julia\bin\julia --depwarn=no -e "Pkg.test(\"CpuId\")"
