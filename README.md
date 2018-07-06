@@ -6,8 +6,10 @@ using the assembly instruction `cpuid`.
 
 _Status: considered a pre-beta version, ready for you to try out._
 
-Works on Julia 0.7 or newer, on Linux, Mac and Windows with Intel CPUs;
-AMD CPUs partially supported respectively support is in preparation.
+[![CpuId](http://pkg.julialang.org/badges/CpuId_0.7.svg)](http://pkg.julialang.org/?pkg=CpuId)
+
+Works on Julia 0.7, on Linux, Mac and Windows with Intel CPUs;
+support for AMD CPUs is in preparation.
 
 
 ## Motivation

@@ -90,7 +90,9 @@ using Markdown: MD
 
 end
 
-# Dump the cpuid table of the executing CPU
+print("\n\n-----\nMocking CpuId\n-----\n\n")
+flush(stdout) ; flush(stderr)
+
 include("mock.jl")
 include("mockdb.jl")
 
