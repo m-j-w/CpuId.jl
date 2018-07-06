@@ -9,4 +9,4 @@ julia:
 notifications:
   email: false
 after_success:
-  - julia -e 'using Pkg; Pkg.dir("CpuId"); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())';
+  - julia --depwarn=no -e 'using Pkg; Pkg.dir("CpuId"); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())';
