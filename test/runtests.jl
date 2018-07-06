@@ -88,6 +88,8 @@ using Test
 
 end
 
+print("-----\nMocking CpuId\n-----")
+
 include("mock.jl")
 include("mockdb.jl")
 
