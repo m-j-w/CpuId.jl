@@ -649,7 +649,9 @@ register values retrieved from `cpuid` on leaf 0x04.
 end
 
 
-function cachesize()
+@noinline function cachesize()
+
+    # TODO: This function fails compilation if inlined.
 
     # TODO: This is awkwardly slow and requires some rework.
     #       Potential approach: Recurse to the last found cache level, there
