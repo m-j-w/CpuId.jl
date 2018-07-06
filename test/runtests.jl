@@ -88,7 +88,8 @@ using Test
 
 end
 
-print("-----\nMocking CpuId\n-----")
+print("\n\n-----\nMocking CpuId\n-----\n\n")
+flush(stdout) ; flush(stderr)
 
 include("mock.jl")
 include("mockdb.jl")
