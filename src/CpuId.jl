@@ -16,7 +16,7 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        perf_gen_bits, cpuinfo, cpufeature, cpufeatures, cpufeaturedesc,
        cpufeaturetable, cpuarchitecture
 
-using Base.Markdown: MD
+using Markdown: MD
 
 # Particular feature flag query is also externalized due to largeness of dicts.
 include("cpufeature.jl")
@@ -33,19 +33,26 @@ Helper function, tagged noinline to not have detrimental effect on performance.
 @noinline _throw_unsupported_leaf(leaf) =
     error("This CPU does not provide information on cpuid leaf 0x$(hex(leaf, sizeof(leaf))).")
 
+"""
+Helper function, not preventing getting a pointer from an immutable.
+"""
+function unsafe_pointer_from_objref(@nospecialize(x))
+    Base.@_inline_meta
+    ccall(:jl_value_ptr, Ptr{Cvoid}, (Any,), x)
+end
 
 """
 Helper function to convert 32 bit registers directly to a Julia string.
 """
-@inline __regs_to_string{N}(regs::NTuple{N,UInt32}) =
-    unsafe_string(Ptr{UInt8}(pointer_from_objref(regs)), sizeof(regs))
+@inline regs_to_string(regs::NTuple{N,UInt32}) where {N} =
+    unsafe_string(Ptr{UInt8}(unsafe_pointer_from_objref(regs)), sizeof(regs))
 
 """
 Helper function to convert 32 bit registers directly to a Julia string.
 The tuple is guaranteed to be zero terminated.
 """
-@inline __regs_to_string_zero{N}(regs::NTuple{N,UInt32}) =
-    unsafe_string(Ptr{UInt8}(pointer_from_objref(regs)))
+@inline regs_to_string_zero(regs::NTuple{N,UInt32}) where {N} =
+    unsafe_string(Ptr{UInt8}(unsafe_pointer_from_objref(regs)))
 
 
 """
@@ -147,7 +154,7 @@ not running a hypervisor, a string of undefined content will be returned.
 """
 function hvvendorstring()
     eax, ebx, ecx, edx = cpuid(0x4000_0000)
-    __regs_to_string( (ebx, ecx, edx) )
+    regs_to_string( (ebx, ecx, edx) )
 end
 
 
@@ -177,7 +184,7 @@ function hvversion()
         leaf = 0x4000_0001
         if hasleaf(leaf)
             eax, ebx, ecx, edx = cpuid(leaf)
-            eax != 0x00 && (d[:signature] = __regs_to_string( (eax, ) ))
+            eax != 0x00 && (d[:signature] = regs_to_string( (eax, ) ))
         end
 
         leaf = 0x4000_0002
@@ -238,7 +245,7 @@ end
 
 
 """
-    hvinfo() ::Base.Markdown.MD
+    hvinfo() ::Markdown.MD
 
 Generate a markdown table of all the detected/available/supported tags of a
 running hypervisor.  If there is no hosting hypervisor, an empty markdown
@@ -246,7 +253,7 @@ string is returned.
 """
 function hvinfo()
     d = hvversion()
-    isempty(d) && return Base.Markdown.MD()
+    isempty(d) && return Markdown.MD()
 
     md = "| Hypervisor | Value |\n|:------|:------|\n"
 
@@ -266,7 +273,7 @@ function hvinfo()
         (md *= string( "| Frequencies | TSC = ", d[:tscfreq] ÷ 1000,
                        " MHz, bus = ", d[:busfreq] ÷ 1000, " MHz |\n"))
 
-    Base.Markdown.parse(md)
+    Markdown.parse(md)
 end
 
 
@@ -279,7 +286,7 @@ Use `cpuvendor()` if you prefer getting a parsed Julia symbol.
 """
 function cpuvendorstring()
     eax, ebx, ecx, edx = cpuid(0x00)
-    __regs_to_string( (ebx, edx, ecx) )
+    regs_to_string( (ebx, edx, ecx) )
 end
 
 
@@ -343,10 +350,10 @@ function cpubrand() ::String
     hasleaf(leaf) || _throw_unsupported_leaf(leaf)
 
     # Extract the information from leaf 0x8000_0002..0x8000_0004
-    __regs_to_string_zero( (cpuid(0x8000_0002)...,
-                            cpuid(0x8000_0003)...,
-                            cpuid(0x8000_0004)...,
-                            0x0000_0000) )
+    regs_to_string_zero( (cpuid(0x8000_0002)...,
+                          cpuid(0x8000_0003)...,
+                          cpuid(0x8000_0004)...,
+                          0x0000_0000) )
 end
 
 
@@ -662,7 +669,7 @@ function cachesize()
         (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(sl + one(UInt32))...)
     end
 
-    (cachesize_level(zero(UInt32))...)
+    (cachesize_level(zero(UInt32))...,)
 end
 
 @inline cachesize(lvl::Integer) = cachesize(UInt32(lvl))
@@ -899,7 +906,7 @@ function cpuinfo()
         , ["", "$(perf_gen_counters()) general-purpose counters of $(perf_gen_bits()) bit width"] ]
     ibs = !cpufeature(IBS) ? [] : [["", "CPU supports AMD's Instruction Based Sampling (IBS)"]]
 
-    Base.Markdown.MD( Base.Markdown.Table( [
+    Markdown.MD( Markdown.Table( [
         [ "Cpu Property",       "Value"              ],
         #----------------------------------------------
         [ "Brand",              strip(cpubrand())    ],

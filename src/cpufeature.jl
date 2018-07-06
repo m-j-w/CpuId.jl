@@ -15,7 +15,7 @@ http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-arch
 
 Expect this table to be incomplete and improvable.
 """
-immutable CpuFeature
+struct CpuFeature
     leaf::UInt32
     indx::UInt16
     shft::UInt16
@@ -411,17 +411,17 @@ cpufeatures() = Symbol[f for f in keys(CpuFeatureDescription) if cpufeature(eval
 
 
 """
-    cpufeaturetable() ::Base.Markdown.MD
+    cpufeaturetable() ::Markdown.MD
 
 Generate a markdown table of all the detected/available/supported CPU features
 along with some textural description.
 """
-function cpufeaturetable() ::Base.Markdown.MD
-    tbl = Base.Markdown.Table([["Cpu Feature", "Description"]], [:l, :l])
+function cpufeaturetable() ::Markdown.MD
+    tbl = Markdown.Table([["Cpu Feature", "Description"]], [:l, :l])
     for f in cpufeatures()
         push!(tbl.rows, [string(f), cpufeaturedesc(f)])
     end
-    Base.Markdown.MD(tbl)
+    Markdown.MD(tbl)
 end
 
 
