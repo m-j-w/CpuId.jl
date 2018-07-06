@@ -38,27 +38,6 @@ Helper function, tagged noinline to not have detrimental effect on performance.
 @noinline _throw_unsupported_leaf(leaf) =
     error("This CPU does not provide information on cpuid leaf 0x$(string(leaf, base=16, pad=8)).")
 
-"""
-Helper function, not preventing getting a pointer from an immutable.
-"""
-function unsafe_pointer_from_objref(@nospecialize(x))
-    Base.@_inline_meta
-    ccall(:jl_value_ptr, Ptr{Cvoid}, (Any,), x)
-end
-
-"""
-Helper function to convert 32 bit registers directly to a Julia string.
-"""
-@inline regs_to_string(regs::NTuple{N,UInt32}) where {N} =
-    unsafe_string(Ptr{UInt8}(unsafe_pointer_from_objref(regs)), sizeof(regs))
-
-"""
-Helper function to convert 32 bit registers directly to a Julia string.
-The tuple is guaranteed to be zero terminated.
-"""
-@inline regs_to_string_zero(regs::NTuple{N,UInt32}) where {N} =
-    unsafe_string(Ptr{UInt8}(unsafe_pointer_from_objref(regs)))
-
 
 """
     hasleaf(leaf::UInt32) ::Bool
@@ -162,7 +141,7 @@ not running a hypervisor, a string of undefined content will be returned.
 """
 function hvvendorstring()
     eax, ebx, ecx, edx = cpuid(0x4000_0000)
-    regs_to_string( (ebx, ecx, edx) )
+    String( reinterpret(Uint8, [ebx, ecx, edx] ) )
 end
 
 
@@ -192,7 +171,7 @@ function hvversion()
         leaf = 0x4000_0001
         if hasleaf(leaf)
             eax, ebx, ecx, edx = cpuid(leaf)
-            eax != 0x00 && (d[:signature] = regs_to_string( (eax, ) ))
+            eax != 0x00 && (d[:signature] = String( reinterpret(Uint8, ( [eax, ] ))))
         end
 
         leaf = 0x4000_0002
@@ -294,7 +273,7 @@ Use `cpuvendor()` if you prefer getting a parsed Julia symbol.
 """
 function cpuvendorstring()
     eax, ebx, ecx, edx = cpuid(0x00)
-    regs_to_string( (ebx, edx, ecx) )
+    String( reinterpret(UInt8, [ebx, edx, ecx] ) )
 end
 
 
@@ -358,10 +337,9 @@ function cpubrand() ::String
     hasleaf(leaf) || _throw_unsupported_leaf(leaf)
 
     # Extract the information from leaf 0x8000_0002..0x8000_0004
-    regs_to_string_zero( (cpuid(0x8000_0002)...,
-                          cpuid(0x8000_0003)...,
-                          cpuid(0x8000_0004)...,
-                          0x0000_0000) )
+    String( reinterpret(UInt8,
+            [cpuid(0x8000_0002)..., cpuid(0x8000_0003)..., cpuid(0x8000_0004)..., 0x0000_0000] )
+    )
 end
 
 
