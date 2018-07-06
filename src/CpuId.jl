@@ -136,7 +136,7 @@ not running a hypervisor, a string of undefined content will be returned.
 """
 function hvvendorstring()
     eax, ebx, ecx, edx = cpuid(0x4000_0000)
-    String( reinterpret(Uint8, [ebx, ecx, edx] ) )
+    String( reinterpret(UInt8, [ebx, ecx, edx] ) )
 end
 
 
@@ -166,7 +166,7 @@ function hvversion()
         leaf = 0x4000_0001
         if hasleaf(leaf)
             eax, ebx, ecx, edx = cpuid(leaf)
-            eax != 0x00 && (d[:signature] = String( reinterpret(Uint8, ( [eax, ] ))))
+            eax != 0x00 && (d[:signature] = String( reinterpret(UInt8, ( [eax, ] ))))
         end
 
         leaf = 0x4000_0002
