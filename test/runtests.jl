@@ -123,8 +123,6 @@ flush(stdout) ; flush(stderr)
 
             end
         end)
-
-        #dump_cpuid_table()
         flush(stdout) ; flush(stderr)
     end
 end
