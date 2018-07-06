@@ -16,8 +16,8 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        perf_gen_bits, cpuinfo, cpufeature, cpufeatures, cpufeaturedesc,
        cpufeaturetable, cpuarchitecture
 
-using Markdown: MD
-const MarkdownString = MD              # Rename Markdown constructors
+import Markdown
+const MarkdownString = Markdown.MD     # Rename Markdown constructors
 const MarkdownTable = Markdown.Table   # to avoid deprecation warning in 0.7-beta
 const parse_markdown = Markdown.parse
 
