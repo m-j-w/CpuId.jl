@@ -501,8 +501,12 @@ function cpucores() ::Int
         lt == 0x02 && ( nc = ebx & 0xffff; continue )
         # others are invalid and shouldn't be considered..
     end
-    # we need nonzero values of nc and nl
-    (nl == 0x00) ? nc : nc ÷ nl
+
+    return iszero(nc) ? # no cores detected? then maybe its AMD?
+        # AMD 
+        ((cpuid(0x8000_0008)[3] % 8)+1) :
+        # Intel, we need nonzero values of nc and nl
+        (iszero(nl) ? nc : nc ÷ nl)
 end
 
 
@@ -547,7 +551,13 @@ function cpucores_total() ::Int
         lt != 0x02 && continue
         nc = ebx & 0xffff
     end
-    nc
+
+    return iszero(nc) ? # no cores detected? then maybe its AMD?
+        # AMD 
+        ((cpuid(0x0000_0001)[2] >> 16) % 8) :        
+        # Intel
+        (nc)
+
 end
 
 
