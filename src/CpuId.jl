@@ -504,7 +504,7 @@ function cpucores() ::Int
 
     return iszero(nc) ? # no cores detected? then maybe its AMD?
         # AMD 
-        ((cpuid(0x8000_0008)[3] % 8)+1) :
+        ((cpuid(0x8000_0008)[3] & 0x00ff)+1) :
         # Intel, we need nonzero values of nc and nl
         (iszero(nl) ? nc : nc ÷ nl)
 end
@@ -531,6 +531,12 @@ system.
 """
 function cpucores_total() ::Int
 
+    # 1) First try to detect whether we have legacy style core count encoding
+    #    This is also correct for AMD, but not for modern Intel.
+    #    nc = ((cpuid(0x0000_0001)[2] >> 16) % 8)
+    #    if !iszero(nc) return nc
+    # 2) Try the modern intel extended information
+
     leaf = 0x0000_000b
     hasleaf(leaf) || return zero(UInt32)
 
@@ -554,7 +560,7 @@ function cpucores_total() ::Int
 
     return iszero(nc) ? # no cores detected? then maybe its AMD?
         # AMD 
-        ((cpuid(0x0000_0001)[2] >> 16) % 8) :        
+        ((cpuid(0x0000_0001)[2] >> 16) & 0x00ff) :
         # Intel
         (nc)
 
