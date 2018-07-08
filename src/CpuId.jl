@@ -371,10 +371,7 @@ function cpuarchitecture() ::Symbol
     family = cpumod[:Family]
     model  = cpumod[:Model]
 
-    # Xeon Phi family 0x07, model 0x01, or Itanium ?
-    family == 0x07 && return :Itanium
-
-    if family == 0x06
+    family == 0x06 &&
         return (model == 0x66) ? :Cannonlake :
                (model == 0x8e || model == 0x9e) ? :Kabylake :
                (model == 0x4e || model == 0x5e || model == 0x55) ? :Skylake :
@@ -394,8 +391,18 @@ function cpuarchitecture() ::Symbol
                (model == 0x57) ? :KnightsLanding :
                # Well, this is awkward...
                :UnknownIntel
-    end
 
+    # Xeon Phi family 0x07, model 0x01, or Itanium ?
+    family == 0x07 && return :Itanium
+
+    # AMD types
+    family == 0x0F && return :K8
+    family == 0x10 && return :K10
+    family == 0x14 && return :Bobcat
+    family == 0x15 && return :Bulldozer
+    family == 0x16 && return :Jaguar
+    family == 0x17 && return :Zen
+    
     return :Unknown
 end
 
