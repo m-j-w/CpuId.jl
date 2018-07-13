@@ -115,7 +115,7 @@ dump_cpuid_table() ; flush(stdout) ; flush(stderr)
                 for p in last(_mockdb[$i])
                     fns, res = p
                     if isa(res, Tuple) && length(res) > 0 && first(res) === :broken
-                        @test_broken getfield(CpuId, fns)() == res
+                        @test_broken getfield(CpuId, fns)() == last(res)
                     else
                         @test getfield(CpuId, fns)() == res
                     end

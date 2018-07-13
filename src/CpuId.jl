@@ -699,6 +699,17 @@ end
 
 @noinline function cachesize()
 
+    function cachesize_level(leaf, sl::UInt32)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
+        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
+        eax & 0x1f == 0 && return ()
+        # could do a sanity check: cache level reported in eax bits 5:7
+        # if lowest bit on eax is zero, then its not a data cache
+        eax & 0x01 == 0 && return cachesize_level(leaf, sl + one(UInt32))
+        # otherwise this should be a valid data or shared cache level
+        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(leaf, sl + one(UInt32))...)
+    end
+
     # TODO: This function fails compilation if inlined.
 
     # TODO: This is awkwardly slow and requires some rework.
@@ -706,23 +717,15 @@ end
     #       allocate a small array, then fill the array when leaving each
     #       recursion level.
 
+    # AMD Exteneded Cache
+    leaf = 0x8000_001d
+    hasleaf(leaf) && cpufeature(TOPX) &&
+        return (cachesize_level(leaf,zero(UInt32))...,)
+    # Intel
     leaf = 0x0000_0004
-    hasleaf(leaf) || return ()
-
-    # Called recursively until the first level gives zero cache size
-
-    function cachesize_level(sl::UInt32)
-        eax, ebx, ecx, edx = cpuid(leaf, sl)
-        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
-        eax & 0x1f == 0 && return ()
-        # could do a sanity check: cache level reported in eax bits 5:7
-        # if lowest bit on eax is zero, then its not a data cache
-        eax & 0x01 == 0 && return cachesize_level(sl + one(UInt32))
-        # otherwise this should be a valid data or shared cache level
-        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(sl + one(UInt32))...)
-    end
-
-    (cachesize_level(zero(UInt32))...,)
+    hasleaf(leaf) && return (cachesize_level(leaf,zero(UInt32))...,)
+    # no cache data available
+    ()
 end
 
 @inline cachesize(lvl::Integer) = cachesize(UInt32(lvl))
@@ -948,7 +951,7 @@ function cpuinfo()
     model = string("Family: 0x",     string(modelfl[:Family],   base=16, pad=2),
                    ", Model: 0x",    string(modelfl[:Model],    base=16, pad=2),
                    ", Stepping: 0x", string(modelfl[:Stepping], base=16, pad=2),
-                   ", Type: ",       string(modelfl[:CpuType],  base=16, pad=2))
+                   ", Type: 0x",     string(modelfl[:CpuType],  base=16, pad=2))
     simd = string(simdbits(), " bit = ", simdbytes(), " byte max. SIMD vector size" )
     tsc = string("TSC is ", (cpufeature(TSC) ? "" : "not "), "accessible via `rdtsc`")
     tscinv = cpufeature(TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :

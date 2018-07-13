@@ -443,8 +443,8 @@ push!( _mockdb, (Dict(
   ) => Dict{Symbol,Any}(
     :cpuvendor       => :Intel,
     :cpuarchitecture => :Haswell,
-    :cpucores        => (:broken, 0),  # physical: 4, but with hypervisor
-    :cputhreads      => (:broken, 0),  # physical: 8, but with hypervisor
+    :cpucores        => 0,  # physical: 4, but with hypervisor
+    :cputhreads      => 0,  # physical: 8, but with hypervisor
     :cachesize       => (32768, 32768, 6291456), # 8MB ?
     :cachelinesize   => 64,
     :simdbits        => 128,
@@ -553,9 +553,9 @@ push!( _mockdb, (Dict(
     # http://www.cpu-world.com/CPUs/Bulldozer/AMD-A10-Series%20A10-8700P.html
     :cpuvendor       => :AMD,
     :cpuarchitecture => :Bulldozer, # :Excavator
-    :cpucores        => (:broken, 4),
-    :cputhreads      => (:broken, 4),  # plus 6 GPU cores
-    :cachesize       => (:broken,), # L1: 4 x 32 KB 8-way data caches, L2 : 2 x 1 MB 16-way set associative shared caches
+    :cpucores        => 4,
+    :cputhreads      => 4,  # plus 6 GPU cores
+    :cachesize       => (32768,), # This is correct since the subleaf 2 is missing of the cpuid dump.
     :cachelinesize   => 64,
     :simdbits        => 256,
   )))
@@ -617,8 +617,8 @@ push!( _mockdb, (Dict(
     :cpuvendor       => :AMD,
     :cpuarchitecture => :Zen,
     :cpucores        => (:broken, 16),
-    :cputhreads      => (:broken, 32),
-    :cachesize       => (:broken,),  # L1 : 16 x 32kB, L2: 16 x 512 kB, L3 : 4 x 8MB
+    :cputhreads      => 32,
+    :cachesize       => (32768, 524288, 8388608),
     :cachelinesize   => 64,
     :simdbits        => 256,
   )))
@@ -678,7 +678,7 @@ push!( _mockdb, (Dict(
     :cpuarchitecture => :Puma,
     :cpucores        => 4,
     :cputhreads      => 4,
-    :cachesize       => (:broken,),  # L1 : 4 x 32kB, L2: 2MB
+    :cachesize       => (32768, 2097152),
     :cachelinesize   => 64,
     :simdbits        => 256,
   )))
@@ -739,7 +739,7 @@ push!( _mockdb, (Dict(
     :cpuarchitecture => :Jaguar,
     :cpucores        => 4,
     :cputhreads      => 4,
-    :cachesize       => (:broken,),  # L1 : 4 x 32kB, L2: 2MB
+    :cachesize       => (32768, 2097152),
     :cachelinesize   => 64,
     :simdbits        => 256,
   )))
