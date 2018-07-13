@@ -15,7 +15,7 @@ push!(_mockdb, (Dict(
     :cputhreads      => 0,
     :cachesize       => (),
     :cachelinesize   => 0,
-    :simdbits        => 64,
+    :simdbits        => sizeof(UInt)*8,
   )))
   
 # Intel(R) Xeon(R) CPU E5-2670 0 @ 2.60GHz, no hypervisor
