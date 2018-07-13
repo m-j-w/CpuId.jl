@@ -4,6 +4,20 @@
 #
 #   R e c o r d e d    c p u i d    d u m p s
 
+# Fake
+push!(_mockdb, (Dict(
+    ((0x00000000, 0x00000000) => (0x00000008, 0x00000000, 0x00000000, 0x00000000)),
+    ((0x80000000, 0x00000000) => (0x80000008, 0x00000000, 0x00000000, 0x00000000)),
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Unknown,
+    :cpuarchitecture => :Unknown,
+    :cpucores        => 0,
+    :cputhreads      => 0,
+    :cachesize       => (),
+    :cachelinesize   => 0,
+    :simdbits        => 64,
+  )))
+  
 # Intel(R) Xeon(R) CPU E5-2670 0 @ 2.60GHz, no hypervisor
 push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
