@@ -398,9 +398,11 @@ function cpuarchitecture() ::Symbol
     # AMD types
     family == 0x0f && return :K8
     family == 0x1f && return :K10
+    family == 0x2f && return :Griffin       # not confirmed
+    family == 0x3f && return :Llano         # not confirmed
     family == 0x5f && return :Bobcat
     family == 0x6f && return :Bulldozer
-    family == 0x7f && return :Jaguar
+    family == 0x7f && return (model == 0x30) ? :Puma : :Jaguar
     family == 0x8f && return :Zen
     
     return :Unknown
