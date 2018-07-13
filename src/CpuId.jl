@@ -11,15 +11,15 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        simdbytes, simdbits, address_size, physical_address_size,
        cpu_base_frequency, cpu_max_frequency, cpu_bus_frequency,
        has_cpu_frequencies, hypervised, hvvendor, hvversion,
-       hvinfo, cpucores, cpucores_total, cpucycle, cpucycle_id,
+       hvinfo, cpucores, cputhreads, cpucycle, cpucycle_id,
        perf_revision, perf_fix_counters, perf_fix_bits, perf_gen_counters,
        perf_gen_bits, cpuinfo, cpufeature, cpufeatures, cpufeaturedesc,
        cpufeaturetable, cpuarchitecture
 
-import Markdown
-const MarkdownString = Markdown.MD     # Rename Markdown constructors
-const MarkdownTable = Markdown.Table   # to avoid deprecation warning in 0.7-beta
-const parse_markdown = Markdown.parse
+using Markdown: MD, Table, parse
+const MarkdownString = MD     # Rename Markdown constructors
+const MarkdownTable = Table   # to avoid deprecation warning in 0.7-beta
+const parse_markdown = parse
 
 # Particular feature flag query is also externalized due to largeness of dicts.
 include("cpufeature.jl")
@@ -518,7 +518,44 @@ end
 
 
 """
-    cpucores_total()
+    cpunodes() -> Int
+
+Determine the number of core complexes, aka nodes, on this processor.
+This notion is introduced by AMD, where L3 caches are shared among the
+cores of a comples
+"""
+function cpunodes()
+
+    # AMD gives the nodes per processor
+    # in extended topology information.
+    # CPUID[0x8000_001e][ECX][10:8]
+    cpunodes_amd() = 1 + ((cpuid(0x8000_001e)[3] >> 8) & 0b0111)
+
+    return 1
+
+end
+
+
+"""
+    cputhreads_per_core() -> Int
+
+Determine the of threads per hardware core on the currently executing CPU.
+A value larger than one indicates simulatenous multithreading being enabled,
+aka SMT, aka Hyperthreading.
+"""
+function cputhreads_per_core()
+
+    cputhreads_per_core_amd() =
+        # AMD gives the threads per physical core
+        # in extended topology information.
+        ((cpuid(0x8000_001e)[2] >> 8) & 0x00ff)
+
+    return 1
+
+end
+
+"""
+    cputhreads()
 
 Determine the number of logical cores on the current executing CPU by
 invoking a `cpuid` instruction.  On systems with multiple CPUs, this only
@@ -533,10 +570,16 @@ code will not benefit, but rather experience a detrimental effect.
 
 See also Julia's global variable `Base.Sys.CPU_CORES`, which gives the total
 count of all cores on the machine.  Thus, `Base.Sys.CPU_CORES ÷
-CpuId.cpucores_total()` gives you the number of CPUs (packages) in your
+CpuId.cputhreads()` gives you the number of CPUs (packages) in your
 system.
 """
-function cpucores_total() ::Int
+function cputhreads() ::Int
+
+    function cputhreads_amd()
+        # AMD stores the total number of threads
+        # aka logical processors directly
+        ((cpuid(0x0000_0001)[2] >> 16) & 0x00ff)
+    end
 
     # 1) First try to detect whether we have legacy style core count encoding
     #    This is also correct for AMD, but not for modern Intel.
@@ -573,6 +616,7 @@ function cpucores_total() ::Int
 
 end
 
+@deprecate cpucores_total() cputhreads()
 
 """
     address_size()
@@ -892,12 +936,12 @@ function cpuinfo()
     cache   = string("Level ", 1:length(cachesz), " : ", map(x->div(x,1024), cachesz), " kbytes")
     cachels = string(cachelinesize(), " byte cache line size")
     cores = string( CpuId.cpucores(), " physical cores, "
-                  , CpuId.cpucores_total(), " logical cores (on executing CPU)")
+                  , CpuId.cputhreads(), " logical cores (on executing CPU)")
     frequencies = !has_cpu_frequencies() ? unsupported :
                         string(cpu_base_frequency(), " / ",
                                cpu_max_frequency(), " MHz (base/max), ",
                                cpu_bus_frequency(), " MHz bus")
-    hyperthreading = (CpuId.cpucores() == CpuId.cpucores_total() ?  "No " : "") * "Hyperthreading detected"
+    hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading detected"
     hypervisor = hypervised() ? "Yes, $(hvvendor())" : "No"
     model = string("Family: ", modelfl[:Family], ", Model: ", modelfl[:Model],
                    ", Stepping: ", modelfl[:Stepping], ", Type: ", modelfl[:CpuType])

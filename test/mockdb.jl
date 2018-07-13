@@ -5,7 +5,7 @@
 #   R e c o r d e d    c p u i d    d u m p s
 
 # Intel(R) Xeon(R) CPU E5-2670 0 @ 2.60GHz, no hypervisor
-push!(_mockdb, Dict(
+push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000206d7, 0x24200800, 0x1fbee3ff, 0xbfebfbff)),
     ((0x00000002, 0x00000000) => (0x76035a01, 0x00f0b2ff, 0x00000000, 0x00ca0000)),
@@ -35,10 +35,18 @@ push!(_mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000100)),
     ((0x80000008, 0x00000000) => (0x0000302e, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :SandyBridge,
+    :cpucores        => 8,
+    :cputhreads      => 16,
+    :cachesize       => (32768, 262144, 20971520),
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+  
 # Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz, with Xen hypervisor
-push!(_mockdb, Dict(
+push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000306e4, 0x24200800, 0xffba2203, 0x178bfbff)),
     ((0x00000002, 0x00000000) => (0x76036301, 0x00f0b2ff, 0x00000000, 0x00ca0000)),
@@ -73,10 +81,18 @@ push!(_mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
     ((0x80000008, 0x00000000) => (0x0000302e, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :IvyBridge,
+    :cpucores        => 8,
+    :cputhreads      => 16,
+    :cachesize       => (32768, 262144, 26214400),
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+  
 # Intel(R) Xeon(R) CPU E5-2680 v3 @ 2.50GHz with Microsoft hypervisor
-push!( _mockdb, Dict(
+push!( _mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000306f2, 0x00020800, 0xfed83203, 0x1f8bfbff)),
     ((0x00000002, 0x00000000) => (0x76036301, 0x00f0b5ff, 0x00000000, 0x00c10000)),
@@ -112,11 +128,18 @@ push!( _mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
     ((0x80000008, 0x00000000) => (0x0000302a, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+    ) => Dict{Symbol,Any}(
+      :cpuvendor       => :Intel,
+      :cpuarchitecture => :Haswell,
+      :cpucores        => 1,
+      :cputhreads      => 2,
+      :cachesize       => (32768, 262144, 31457280),
+      :cachelinesize   => 64,
+      :simdbits        => 256,
+    )))
 
 # Intel(R) Xeon(R) CPU E3-1225 v5 @ 3.30GHz
-push!(_mockdb, Dict(
+push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000206d7, 0x24200800, 0x1fbee3ff, 0xbfebfbff)),
     ((0x00000002, 0x00000000) => (0x76035a01, 0x00f0b2ff, 0x00000000, 0x00ca0000)),
@@ -146,11 +169,19 @@ push!(_mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000100)),
     ((0x80000008, 0x00000000) => (0x0000302e, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :SandyBridge,
+    :cpucores        => 8,
+    :cputhreads      => 16,
+    :cachesize       => (32768, 262144, 20971520),
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+  
 
 # Intel(R) Xeon(R) CPU X5570 @ 2.93GHz, with VMware hypervisor
-push!(_mockdb, Dict(
+push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000b, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000106a5, 0x00010800, 0x81b82209, 0x0fabfbff)),
     ((0x00000002, 0x00000000) => (0x55035a01, 0x00f0b2e4, 0x00000000, 0x09ca212c)),
@@ -196,11 +227,18 @@ push!(_mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000100)),
     ((0x80000008, 0x00000000) => (0x0000302a, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :Nehalem,
+    :cpucores        => (:broken,), # =1,
+    :cputhreads      => (:broken,), # =1,
+    :cachesize       => (32768, 262144, 8388608),
+    :cachelinesize   => 64,
+    :simdbits        => 128,
+  )))
+    
 # Intel(R) Core(TM) i5-2520M CPU @ 2.50GHz with VMware hypervisor
-push!(_mockdb, Dict(
+push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000206a7, 0x06010800, 0x9fba2223, 0x0fabfbff)),
     ((0x00000002, 0x00000000) => (0x76035a01, 0x00f0b2ff, 0x00000000, 0x00ca0000)),
@@ -247,11 +285,18 @@ push!(_mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000100)),
     ((0x80000008, 0x00000000) => (0x0000302a, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :SandyBridge,
+    :cpucores        => (:broken,), # =1
+    :cputhreads      => (:broken,), # =1
+    :cachesize       => (32768, 262144, 3145728),
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
 
 # Intel(R) Core(TM) i5-2520M CPU @ 2.50GHz without hypervisor
-push!(_mockdb, Dict(
+push!(_mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x000206a7, 0x00100800, 0x1fbae3ff, 0xbfebfbff)),
     ((0x00000002, 0x00000000) => (0x76035a01, 0x00f0b2ff, 0x00000000, 0x00ca0000)),
@@ -281,10 +326,18 @@ push!(_mockdb, Dict(
     ((0x80000006, 0x00000000) => (0x00000000, 0x00000000, 0x01006040, 0x00000000)),
     ((0x80000007, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000100)),
     ((0x80000008, 0x00000000) => (0x00003024, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :SandyBridge,
+    :cpucores        => 2,
+    :cputhreads      => 4,
+    :cachesize       => (32768, 262144, 3145728),
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+    
 # Intel(R) Xeon Phi(TM) CPU 7250 @ 1.40GHz without hypervisor
-push!( _mockdb, Dict(
+push!( _mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x756e6547, 0x6c65746e, 0x49656e69)),
     ((0x00000001, 0x00000000) => (0x00050671, 0x01ff0800, 0x7ff8f3bf, 0xbfebfbff)),
     ((0x00000002, 0x00000000) => (0x6c6b6a01, 0x00ff616d, 0x00000000, 0x00000000)),
@@ -313,8 +366,16 @@ push!( _mockdb, Dict(
     ((0x00000004, 0x00000003) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
     ((0x0000000b, 0x00000001) => (0x00000009, 0x00000110, 0x00000201, 0x00000001)),
     ((0x0000000b, 0x00000002) => (0x00000000, 0x00000000, 0x00000002, 0x00000001)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :KnightsLanding,
+    :cpucores        => 68,
+    :cputhreads      => 272,
+    :cachesize       => (32768, 1048576),
+    :cachelinesize   => 64,
+    :simdbits        => 512,
+  )))
+    
 # This is used on pkg.julialang.org for testing.
 # Intel(R) Xeon(R) CPU E3-1241 v3 @ 3.50GHz without hypervisor
 #
@@ -346,7 +407,7 @@ push!( _mockdb, Dict(
 # address sizes     : 39 bits physical, 48 bits virtual
 # power management:
 #
-push!( _mockdb, Dict(
+push!( _mockdb, (Dict(
     ((0x00000000,0x00000000) => (0x00000005,0x756e6547,0x6c65746e,0x49656e69)),
     ((0x00000001,0x00000000) => (0x000306c3,0x01020800,0x00000201,0x178bfbff)),
     ((0x00000002,0x00000000) => (0x76036301,0x00f0b5ff,0x00000000,0x00c10000)),
@@ -365,10 +426,18 @@ push!( _mockdb, Dict(
     ((0x00000004,0x00000001) => (0x04000021,0x01c0003f,0x0000003f,0x00000000)),
     ((0x00000004,0x00000002) => (0x04004041,0x05c0003f,0x00000fff,0x00000000)),
     ((0x00000004,0x00000003) => (0x04000000,0x00000000,0x00000000,0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :Haswell,
+    :cpucores        => (:broken,),
+    :cputhreads      => (:broken,),
+    :cachesize       => (32768, 32768, 6291456),
+    :cachelinesize   => 64,
+    :simdbits        => 128,
+  )))
+  
 # Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz without hypervisor
-push!( _mockdb, Dict(
+push!( _mockdb, (Dict(
     ((0x00000000,0x00000000) => (0x00000016,0x756e6547,0x6c65746e,0x49656e69)),
     ((0x00000001,0x00000000) => (0x000406e3,0x00100800,0x7ffafbff,0xbfebfbff)),
     ((0x00000002,0x00000000) => (0x76036301,0x00f0b5ff,0x00000000,0x00c30000)),
@@ -407,10 +476,18 @@ push!( _mockdb, Dict(
     ((0x00000004,0x00000004) => (0x00000000,0x00000000,0x00000000,0x00000000)),
     ((0x0000000b,0x00000001) => (0x00000004,0x00000004,0x00000201,0x00000001)),
     ((0x0000000b,0x00000002) => (0x00000000,0x00000000,0x00000002,0x00000001)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :Intel,
+    :cpuarchitecture => :Skylake,
+    :cpucores        => 2,
+    :cputhreads      => 4,
+    :cachesize       => (32768, 262144, 4194304),
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+  
 # AMD A10-8700P Radeon R6, 10 Compute Cores 4C+6G without hypervisor
-push!( _mockdb, Dict(
+push!( _mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000d, 0x68747541, 0x444d4163, 0x69746e65)),
     ((0x00000001, 0x00000000) => (0x00660f01, 0x02040800, 0x3ed8320b, 0x178bfbff)),
     ((0x00000002, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
@@ -458,10 +535,18 @@ push!( _mockdb, Dict(
     ((0x8000001e, 0x00000000) => (0x00000010, 0x00000100, 0x00000000, 0x00000000)),
     ((0x00000004, 0x00000001) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
     ((0x0000000b, 0x00000001) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
-  ))
-
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :AMD,
+    :cpuarchitecture => (:broken,),
+    :cpucores        => (:broken, 4),
+    :cputhreads      => (:broken, 4),
+    :cachesize       => (:broken,), # L2 = 2MB
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+  
 # AMD Ryzen Threadripper 1950X 16-Core Processor
-push!( _mockdb, Dict(
+push!( _mockdb, (Dict(
     ((0x00000000, 0x00000000) => (0x0000000D, 0x68747541, 0x444D4163, 0x69746E65)),
     ((0x00000001, 0x00000000) => (0x00800F11, 0x00200800, 0x7ED8320B, 0x178BFBFF)),
     ((0x00000002, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
@@ -512,5 +597,14 @@ push!( _mockdb, Dict(
     ((0x8000001E, 0x00000000) => (0x00000000, 0x00000100, 0x00000100, 0x00000000)),
     ((0x8000001F, 0x00000000) => (0x00000007, 0x0000016F, 0x0000000F, 0x00000001)),
     ((0x8FFFFFFF, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
-  ))
+  ) => Dict{Symbol,Any}(
+    :cpuvendor       => :AMD,
+    :cpuarchitecture => (:broken,),
+    :cpucores        => (:broken, 16),
+    :cputhreads      => (:broken, 32),
+    :cachesize       => (:broken,),  # L1 = 1.5MB, L2 = 8MB, L3 = 32MB    
+    :cachelinesize   => 64,
+    :simdbits        => 256,
+  )))
+  
 #=--- end of file ---------------------------------------------------------=#

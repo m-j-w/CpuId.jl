@@ -1,4 +1,5 @@
 using Test
+using Markdown: MD
 
 @testset "ReturnTypes" begin
 
@@ -60,14 +61,14 @@ using Test
     @test isa( simdbits()             , Integer )
     @test isa( simdbytes()            , Integer )
     @test isa( cpucores()             , Integer )
-    @test isa( cpucores_total()       , Integer )
+    @test isa( cputhreads()           , Integer )
     @test isa( has_cpu_frequencies()  , Bool )
     @test isa( cpu_base_frequency()   , Integer )
     @test isa( cpu_bus_frequency()    , Integer )
     @test isa( cpu_max_frequency()    , Integer )
-    @test isa( cpuinfo()              , Markdown.MD )
-    @test isa( cpufeaturetable()      , Markdown.MD )
-    @test isa( hvinfo()               , Markdown.MD )
+    @test isa( cpuinfo()              , MD )
+    @test isa( cpufeaturetable()      , MD )
+    @test isa( hvinfo()               , MD )
 
     @test isa( cpucycle()             , UInt64 )
     @test isa( cpucycle_id()          , Tuple{UInt64,UInt64} )
@@ -106,12 +107,22 @@ dump_cpuid_table() ; flush(stdout) ; flush(stderr)
             @testset "Mocked #$($i) $(strip(cpubrand()))" begin
                 flush(stdout) ; flush(stderr)
                 @test isa( cpubrand()       , String )
-                @test isa( cpuinfo()        , Markdown.MD )
-                @test isa( cpufeaturetable(), Markdown.MD )
-                @test isa( hvinfo()         , Markdown.MD )
+                @test isa( cpuinfo()        , MD )
+                @test isa( cpufeaturetable(), MD )
+                @test isa( hvinfo()         , MD )
                 println("Tested recorded cpuid table #",$i," for '", strip(cpubrand()), "'")
+
+                for p in last(_mockdb[$i])
+                    fns, res = p
+                    if isa(res, Tuple) && first(res) === :broken
+                        @test_broken getfield(CpuId, fns)() == res
+                    else
+                        @test getfield(CpuId, fns)() == res
+                    end
+                end
             end
         end)
+        dump_cpuid_table()
         flush(stdout) ; flush(stderr)
     end
 end

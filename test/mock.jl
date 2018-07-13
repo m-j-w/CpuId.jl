@@ -12,7 +12,7 @@ import CpuId.CpuInstructions
 Entry for mocking `cpuid`, maps input and output of the `cpuid` instruction
 on a known CPU; viz. `(eax, ecx) -> (eax, ebx, ecx, edx)`.
 """
-const _mockdb_entry = Dict{ NTuple{2,UInt32}, NTuple{4,UInt32} }
+const _mockdb_entry = Pair{ Dict{NTuple{2,UInt32}, NTuple{4,UInt32}}, Dict{Symbol,Any} }
 
 
 """
@@ -35,7 +35,7 @@ function mock_cpuid(idx::Integer)
               "with indices 1:$(length(_mockdb))")
 
     _fake_cpuid(eax=0, ecx=0)::NTuple{4,UInt32} =
-        get( _mockdb[idx], (UInt32(eax), UInt32(ecx))
+        get( first(_mockdb[idx]), (UInt32(eax), UInt32(ecx))
            , (zero(UInt32), zero(UInt32), zero(UInt32), zero(UInt32),) )
 
     CpuInstructions.eval( :(cpuid(eax::UInt32, ecx::UInt32) = $_fake_cpuid(eax, ecx) ) )
@@ -51,7 +51,7 @@ function dump_cpuid_table()
 
     println("# ", strip(CpuId.cpubrand()), " with",
             CpuId.hypervised() ? " "*string(CpuId.hvvendor()) : "out", " hypervisor" )
-    println("push!( _mockdb, Dict(")
+    println("push!( _mockdb, (Dict(")
 
     for minleaf in [0x0000_0000,0x2000_0000,0x4000_0000,0x8000_0000]
         # get the maximum leaf
@@ -83,7 +83,17 @@ function dump_cpuid_table()
         end
     end
 
-    println("  ))\n\nDone.\n")
+    println("  ) => Dict{Symbol,Any}(")
+    # print the results of certain identification functions
+    println("    :cpuvendor       => :", cpuvendor(),       ",")
+    println("    :cpuarchitecture => :", cpuarchitecture(), ",")
+    println("    :cpucores        => ", cpucores(),         ",")
+    println("    :cputhreads      => ", cputhreads(),       ",")
+    println("    :cachesize       => ", cachesize(),        ",")
+    println("    :cachelinesize   => ", cachelinesize(),    ",")
+    println("    :simdbits        => ", simdbits(),         ",")
+
+    println("  )))\n\nDone.\n")
 
 end
 
