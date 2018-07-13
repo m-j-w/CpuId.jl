@@ -122,7 +122,7 @@ dump_cpuid_table() ; flush(stdout) ; flush(stderr)
                 end
             end
         end)
-        dump_cpuid_table()
+        #dump_cpuid_table()
         flush(stdout) ; flush(stderr)
     end
 end

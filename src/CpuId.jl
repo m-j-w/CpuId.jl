@@ -396,12 +396,12 @@ function cpuarchitecture() ::Symbol
     family == 0x07 && return :Itanium
 
     # AMD types
-    family == 0x0F && return :K8
-    family == 0x10 && return :K10
-    family == 0x14 && return :Bobcat
-    family == 0x15 && return :Bulldozer
-    family == 0x16 && return :Jaguar
-    family == 0x17 && return :Zen
+    family == 0x0f && return :K8
+    family == 0x1f && return :K10
+    family == 0x5f && return :Bobcat
+    family == 0x6f && return :Bulldozer
+    family == 0x7f && return :Jaguar
+    family == 0x8f && return :Zen
     
     return :Unknown
 end
@@ -943,8 +943,10 @@ function cpuinfo()
                                cpu_bus_frequency(), " MHz bus")
     hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading detected"
     hypervisor = hypervised() ? "Yes, $(hvvendor())" : "No"
-    model = string("Family: ", modelfl[:Family], ", Model: ", modelfl[:Model],
-                   ", Stepping: ", modelfl[:Stepping], ", Type: ", modelfl[:CpuType])
+    model = string("Family: 0x",     string(modelfl[:Family],   base=16, pad=2),
+                   ", Model: 0x",    string(modelfl[:Model],    base=16, pad=2),
+                   ", Stepping: 0x", string(modelfl[:Stepping], base=16, pad=2),
+                   ", Type: ",       string(modelfl[:CpuType],  base=16, pad=2))
     simd = string(simdbits(), " bit = ", simdbytes(), " byte max. SIMD vector size" )
     tsc = string("TSC is ", (cpufeature(TSC) ? "" : "not "), "accessible via `rdtsc`")
     tscinv = cpufeature(TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :

@@ -230,8 +230,8 @@ push!(_mockdb, (Dict(
   ) => Dict{Symbol,Any}(
     :cpuvendor       => :Intel,
     :cpuarchitecture => :Nehalem,
-    :cpucores        => (:broken,), # =1,
-    :cputhreads      => (:broken,), # =1,
+    :cpucores        => 1,   # physical: 4, but with hypervisor
+    :cputhreads      => 1,   # physical: 8, but with hypervisor
     :cachesize       => (32768, 262144, 8388608),
     :cachelinesize   => 64,
     :simdbits        => 128,
@@ -288,8 +288,8 @@ push!(_mockdb, (Dict(
   ) => Dict{Symbol,Any}(
     :cpuvendor       => :Intel,
     :cpuarchitecture => :SandyBridge,
-    :cpucores        => (:broken,), # =1
-    :cputhreads      => (:broken,), # =1
+    :cpucores        => 1,  # physical: 2, but with hypervisor
+    :cputhreads      => 1,  # physical: 4, but with hypervisor
     :cachesize       => (32768, 262144, 3145728),
     :cachelinesize   => 64,
     :simdbits        => 256,
@@ -429,9 +429,9 @@ push!( _mockdb, (Dict(
   ) => Dict{Symbol,Any}(
     :cpuvendor       => :Intel,
     :cpuarchitecture => :Haswell,
-    :cpucores        => (:broken,),
-    :cputhreads      => (:broken,),
-    :cachesize       => (32768, 32768, 6291456),
+    :cpucores        => (:broken, 0),  # physical: 4, but with hypervisor
+    :cputhreads      => (:broken, 0),  # physical: 8, but with hypervisor
+    :cachesize       => (32768, 32768, 6291456), # 8MB ?
     :cachelinesize   => 64,
     :simdbits        => 128,
   )))
@@ -536,11 +536,12 @@ push!( _mockdb, (Dict(
     ((0x00000004, 0x00000001) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
     ((0x0000000b, 0x00000001) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
   ) => Dict{Symbol,Any}(
+    # http://www.cpu-world.com/CPUs/Bulldozer/AMD-A10-Series%20A10-8700P.html
     :cpuvendor       => :AMD,
-    :cpuarchitecture => (:broken,),
+    :cpuarchitecture => :Bulldozer, # :Excavator
     :cpucores        => (:broken, 4),
-    :cputhreads      => (:broken, 4),
-    :cachesize       => (:broken,), # L2 = 2MB
+    :cputhreads      => (:broken, 4),  # plus 6 GPU cores
+    :cachesize       => (:broken,), # L1: 4 x 32 KB 8-way data caches, L2 : 2 x 1 MB 16-way set associative shared caches
     :cachelinesize   => 64,
     :simdbits        => 256,
   )))
@@ -598,11 +599,12 @@ push!( _mockdb, (Dict(
     ((0x8000001F, 0x00000000) => (0x00000007, 0x0000016F, 0x0000000F, 0x00000001)),
     ((0x8FFFFFFF, 0x00000000) => (0x00000000, 0x00000000, 0x00000000, 0x00000000)),
   ) => Dict{Symbol,Any}(
+    # http://www.cpu-world.com/CPUs/Zen/AMD-Ryzen%20Threadripper%201950X.html
     :cpuvendor       => :AMD,
-    :cpuarchitecture => (:broken,),
+    :cpuarchitecture => :Zen,
     :cpucores        => (:broken, 16),
     :cputhreads      => (:broken, 32),
-    :cachesize       => (:broken,),  # L1 = 1.5MB, L2 = 8MB, L3 = 32MB    
+    :cachesize       => (:broken,),  # L1 : 16 x 32kB, L2: 16 x 512 kB, L3 : 4 x 8MB
     :cachelinesize   => 64,
     :simdbits        => 256,
   )))
