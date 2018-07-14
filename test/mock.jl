@@ -83,6 +83,15 @@ function dump_cpuid_table()
         end
     end
 
+    leaf = 0x8000_001d
+    if CpuId.hasleaf(leaf)
+        for subleaf in 0x0000_0001:0x0000_000f
+            eax, ebx, ecx, edx = CpuId.cpuid(leaf, subleaf)
+            println("    (",(leaf, subleaf), " => ", (eax, ebx, ecx, edx), "),")
+            eax & 0x1f == 0 && break
+        end
+    end
+
     println("  ) => Dict{Symbol,Any}(")
     # print the results of certain identification functions
     println("    :cpuvendor       => :", cpuvendor(),       ",")

@@ -21,6 +21,8 @@ const MarkdownString = MD     # Rename Markdown constructors
 const MarkdownTable = Table   # to avoid deprecation warning in 0.7-beta
 const parse_markdown = parse
 
+using Base: @_noinline_meta, @_inline_meta
+
 # Particular feature flag query is also externalized due to largeness of dicts.
 include("cpufeature.jl")
 
@@ -33,8 +35,10 @@ using .CpuInstructions: cpuid, rdtsc, rdtscp
 """
 Helper function, tagged noinline to not have detrimental effect on performance.
 """
-@noinline _throw_unsupported_leaf(leaf) =
+function _throw_unsupported_leaf(leaf)
+    @_noinline_meta
     error("This CPU does not provide information on cpuid leaf 0x$(string(leaf, base=16, pad=8)).")
+end
 
 
 """
@@ -47,7 +51,8 @@ Note: It appears LLVM really know its gear: If this function is inlined, and
       just-in-time compiled, then this test is eliminated completly if the
       executing machine does support this feature. Yeah!
 """
-@inline function hasleaf(leaf::UInt32) ::Bool
+function hasleaf(leaf::UInt32) ::Bool
+    @_inline_meta
     eax, ebx, ecx, edx = cpuid(leaf & 0xffff_0000)
     eax >= leaf
 end
@@ -550,7 +555,7 @@ function cputhreads_per_core()
     cputhreads_per_core_amd() =
         # AMD gives the threads per physical core
         # in extended topology information.
-        ((cpuid(0x8000_001e)[2] >> 8) & 0x00ff)
+        ((cpuid(0x8000_001e)[2] >> 8) & 0x00ff) + 1
 
     return 1
 

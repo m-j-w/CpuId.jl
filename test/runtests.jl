@@ -89,16 +89,16 @@ using Markdown: MD
 
 end
 
+# Dump the cpuid table of the executing CPU
+include("mock.jl")
+dump_cpuid_table() ; flush(stdout) ; flush(stderr)
+
 print("\n\n-----\nMocking CpuId\n-----\n\n")
 flush(stdout) ; flush(stderr)
 
-include("mock.jl")
+# Run the known cpuid records
 include("mockdb.jl")
 
-# Dump the cpuid table of the executing CPU
-dump_cpuid_table() ; flush(stdout) ; flush(stderr)
-
-# Run the known cpuid records
 @testset "Mocking" begin
     for i in 1:length(_mockdb)
         # temporarily replace the low-level cpuid function with known records
