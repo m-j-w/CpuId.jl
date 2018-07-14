@@ -67,14 +67,8 @@ using Markdown: MD
     @test isa( cpufeaturetable()      , MD )
     @test isa( hvinfo()               , MD )
 
-#=  These seem to fail on Win32
-
-    @test isa( CpuId.cpucycle()       , UInt64 )
-    @test isa( CpuId.cpucycle_id()    , Tuple{UInt64, UInt64} )
-
     @test isa( cpucycle()             , UInt64 )
     @test isa( cpucycle_id()          , Tuple{UInt64,UInt64} )
-=#
 
     @test isa( perf_revision()        , Int )
     @test isa( perf_gen_counters()    , Int )
