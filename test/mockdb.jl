@@ -802,7 +802,7 @@ push!( _mockdb, (Dict(
   # http://www.cpu-world.com/CPUs/Zen/AMD-EPYC%207401P.html
   :cpuvendor       => :AMD,
   :cpuarchitecture => :Zen,
-  :cpucores        => (:brokem, 24),
+  :cpucores        => (:broken, 24),
   :cputhreads      => 48,
   :cachesize       => (32768, 524288, 8388608),
   :cachelinesize   => 64,

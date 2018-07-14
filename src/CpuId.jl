@@ -441,7 +441,8 @@ Query the CPU on the maximum supported SIMD vector size in bytes, or
 `sizeof(Int)` if no SIMD capability is reported by the invoked `cpuid`
 instruction.
 """
-@inline function simdbytes() ::Int
+function simdbytes() ::Int
+    @_inline_meta
 
     simd = 0
 
@@ -471,7 +472,7 @@ Query the CPU on the maximum supported SIMD vector size in bits, or
 `sizeof(Int)` in bits if no SIMD capability is reported by the invoked `cpuid`
 instruction.
 """
-@inline simdbits() = simdbytes() * 8
+simdbits() = simdbytes() * 8
 
 
 """
@@ -694,7 +695,8 @@ register values retrieved from `cpuid` on leaf 0x04.
 >     ways = ebx[22:31], partitions = ebx[12:21], linesize = ebx[0:11]
 >     sets = ecx[:]
 """
-@inline function __datacachesize(eax::UInt32, ebx::UInt32, ecx::UInt32) ::UInt32
+function __datacachesize(eax::UInt32, ebx::UInt32, ecx::UInt32) ::UInt32
+    @_inline_meta
     (1 + (ebx>>22) & 0x03ff ) *    # ways
     (1 + (ebx>>12) & 0x03ff ) *    # partitions
     (1 +  ebx      & 0x0fff ) *    # linesize
@@ -702,7 +704,7 @@ register values retrieved from `cpuid` on leaf 0x04.
 end
 
 
-@noinline function cachesize()
+function cachesize()
 
     function cachesize_level(leaf, sl::UInt32)
         eax, ebx, ecx, edx = cpuid(leaf, sl)
@@ -733,9 +735,10 @@ end
     ()
 end
 
-@inline cachesize(lvl::Integer) = cachesize(UInt32(lvl))
+cachesize(lvl::Integer) = cachesize(UInt32(lvl))
 
-@inline function cachesize(lvl::UInt32) ::Int
+function cachesize(lvl::UInt32) ::Int
+    @_inline_meta
 
     lvl == 0 && return 0
 
