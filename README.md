@@ -113,7 +113,7 @@ This release covers a selection of fundamental and higher level functionality:
      CPU.
  - `cpuarchitecture()` tries to infer the microarchitecture, currently only of
      Intel CPUs.
- - `cpucores()` and `cpucores_total()` to determine the number of physical and
+ - `cpucores()` and `cputhreads()` to determine the number of physical and
      logical cores on the currently executing CPU, which typically share L3
      caches and main memory bandwidth.  If the result of both functions is
      equal, then the CPU does *not* use of hyperthreading.

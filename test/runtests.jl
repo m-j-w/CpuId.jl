@@ -1,4 +1,5 @@
 using Test
+using Markdown: MD
 
 @testset "ReturnTypes" begin
 
@@ -57,14 +58,14 @@ using Test
     @test isa( simdbits()             , Integer )
     @test isa( simdbytes()            , Integer )
     @test isa( cpucores()             , Integer )
-    @test isa( cpucores_total()       , Integer )
+    @test isa( cputhreads()           , Integer )
     @test isa( has_cpu_frequencies()  , Bool )
     @test isa( cpu_base_frequency()   , Integer )
     @test isa( cpu_bus_frequency()    , Integer )
     @test isa( cpu_max_frequency()    , Integer )
-    @test isa( cpuinfo()              , Markdown.MD )
-    @test isa( cpufeaturetable()      , Markdown.MD )
-    @test isa( hvinfo()               , Markdown.MD )
+    @test isa( cpuinfo()              , MD )
+    @test isa( cpufeaturetable()      , MD )
+    @test isa( hvinfo()               , MD )
 
 #=  These seem to fail on Win32
 
@@ -91,30 +92,41 @@ using Test
 
 end
 
-print("\n\n-----\nMocking CpuId\n-----\n\n")
-flush(stdout) ; flush(stderr)
-
+# Dump the cpuid table of the executing CPU
 include("mock.jl")
 include("mockdb.jl")
 
-# Dump the cpuid table of the executing CPU
 dump_cpuid_table() ; flush(stdout) ; flush(stderr)
+
+print("\n\n-----\nMocking CpuId\n-----\n\n")
+flush(stdout) ; flush(stderr)
 
 # Run the known cpuid records
 @testset "Mocking" begin
     for i in 1:length(_mockdb)
         # temporarily replace the low-level cpuid function with known records
-        mock_cpuid(i)
         eval(quote
             @testset "Mocked #$($i) $(strip(cpubrand()))" begin
+                mock_cpuid($i)
                 flush(stdout) ; flush(stderr)
                 @test isa( cpubrand()       , String )
-                @test isa( cpuinfo()        , Markdown.MD )
-                @test isa( cpufeaturetable(), Markdown.MD )
-                @test isa( hvinfo()         , Markdown.MD )
+                @test isa( cpuinfo()        , MD )
+                @test isa( cpufeaturetable(), MD )
+                @test isa( hvinfo()         , MD )
                 println("Tested recorded cpuid table #",$i," for '", strip(cpubrand()), "'")
+
+                for (fns, res) in last(_mockdb[$i])
+                    if isa(res, Tuple) && length(res) > 0 && first(res) === :broken
+                        @test_broken getfield(CpuId, fns)() == last(res)
+                    else
+                        @test getfield(CpuId, fns)() == res
+                    end
+                end
+        
             end
         end)
+
+        #dump_cpuid_table()
         flush(stdout) ; flush(stderr)
     end
 end

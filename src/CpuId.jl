@@ -11,15 +11,17 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        simdbytes, simdbits, address_size, physical_address_size,
        cpu_base_frequency, cpu_max_frequency, cpu_bus_frequency,
        has_cpu_frequencies, hypervised, hvvendor, hvversion,
-       hvinfo, cpucores, cpucores_total, cpucycle, cpucycle_id,
+       hvinfo, cpucores, cputhreads, cpucycle, cpucycle_id,
        perf_revision, perf_fix_counters, perf_fix_bits, perf_gen_counters,
        perf_gen_bits, cpuinfo, cpufeature, cpufeatures, cpufeaturedesc,
        cpufeaturetable, cpuarchitecture
 
-import Markdown
-const MarkdownString = Markdown.MD     # Rename Markdown constructors
-const MarkdownTable = Markdown.Table   # to avoid deprecation warning in 0.7-beta
-const parse_markdown = Markdown.parse
+using Markdown: MD, Table, parse
+const MarkdownString = MD     # Rename Markdown constructors
+const MarkdownTable = Table   # to avoid deprecation warning in 0.7-beta
+const parse_markdown = parse
+
+using Base: @_noinline_meta, @_inline_meta
 
 # Particular feature flag query is also externalized due to largeness of dicts.
 include("cpufeature.jl")
@@ -33,8 +35,10 @@ using .CpuInstructions: cpuid, rdtsc, rdtscp
 """
 Helper function, tagged noinline to not have detrimental effect on performance.
 """
-@noinline _throw_unsupported_leaf(leaf) =
+function _throw_unsupported_leaf(leaf)
+    @_noinline_meta
     error("This CPU does not provide information on cpuid leaf 0x$(string(leaf, base=16, pad=8)).")
+end
 
 
 """
@@ -47,7 +51,8 @@ Note: It appears LLVM really know its gear: If this function is inlined, and
       just-in-time compiled, then this test is eliminated completly if the
       executing machine does support this feature. Yeah!
 """
-@inline function hasleaf(leaf::UInt32) ::Bool
+function hasleaf(leaf::UInt32) ::Bool
+    @_inline_meta
     eax, ebx, ecx, edx = cpuid(leaf & 0xffff_0000)
     eax >= leaf
 end
@@ -371,10 +376,7 @@ function cpuarchitecture() ::Symbol
     family = cpumod[:Family]
     model  = cpumod[:Model]
 
-    # Xeon Phi family 0x07, model 0x01, or Itanium ?
-    family == 0x07 && return :Itanium
-
-    if family == 0x06
+    family == 0x06 &&
         return (model == 0x66) ? :Cannonlake :
                (model == 0x8e || model == 0x9e) ? :Kabylake :
                (model == 0x4e || model == 0x5e || model == 0x55) ? :Skylake :
@@ -394,8 +396,20 @@ function cpuarchitecture() ::Symbol
                (model == 0x57) ? :KnightsLanding :
                # Well, this is awkward...
                :UnknownIntel
-    end
 
+    # Xeon Phi family 0x07, model 0x01, or Itanium ?
+    family == 0x07 && return :Itanium
+
+    # AMD types
+    family == 0x0f && return :K8
+    family == 0x1f && return :K10
+    family == 0x2f && return :Griffin       # not confirmed
+    family == 0x3f && return :Llano         # not confirmed
+    family == 0x5f && return :Bobcat
+    family == 0x6f && return :Bulldozer
+    family == 0x7f && return (model == 0x30) ? :Puma : :Jaguar
+    family == 0x8f && return :Zen
+    
     return :Unknown
 end
 
@@ -501,13 +515,54 @@ function cpucores() ::Int
         lt == 0x02 && ( nc = ebx & 0xffff; continue )
         # others are invalid and shouldn't be considered..
     end
-    # we need nonzero values of nc and nl
-    (nl == 0x00) ? nc : nc ÷ nl
+
+    return iszero(nc) ? # no cores detected? then maybe its AMD?
+        # AMD 
+        ((cpuid(0x8000_0008)[3] & 0x00ff)+1) :
+        # Intel, we need nonzero values of nc and nl
+        (iszero(nl) ? nc : nc ÷ nl)
 end
 
 
 """
-    cpucores_total()
+    cpunodes() -> Int
+
+Determine the number of core complexes, aka nodes, on this processor.
+This notion is introduced by AMD, where L3 caches are shared among the
+cores of a comples
+"""
+function cpunodes()
+
+    # AMD gives the nodes per processor
+    # in extended topology information.
+    # CPUID[0x8000_001e][ECX][10:8]
+    cpunodes_amd() = 1 + ((cpuid(0x8000_001e)[3] >> 8) & 0b0111)
+
+    return 1
+
+end
+
+
+"""
+    cputhreads_per_core() -> Int
+
+Determine the of threads per hardware core on the currently executing CPU.
+A value larger than one indicates simulatenous multithreading being enabled,
+aka SMT, aka Hyperthreading.
+"""
+function cputhreads_per_core()
+
+    cputhreads_per_core_amd() =
+        # AMD gives the threads per physical core
+        # in extended topology information.
+        ((cpuid(0x8000_001e)[2] >> 8) & 0x00ff) + 1
+
+    return 1
+
+end
+
+"""
+    cputhreads()
 
 Determine the number of logical cores on the current executing CPU by
 invoking a `cpuid` instruction.  On systems with multiple CPUs, this only
@@ -522,10 +577,22 @@ code will not benefit, but rather experience a detrimental effect.
 
 See also Julia's global variable `Base.Sys.CPU_CORES`, which gives the total
 count of all cores on the machine.  Thus, `Base.Sys.CPU_CORES ÷
-CpuId.cpucores_total()` gives you the number of CPUs (packages) in your
+CpuId.cputhreads()` gives you the number of CPUs (packages) in your
 system.
 """
-function cpucores_total() ::Int
+function cputhreads() ::Int
+
+    function cputhreads_amd()
+        # AMD stores the total number of threads
+        # aka logical processors directly
+        ((cpuid(0x0000_0001)[2] >> 16) & 0x00ff)
+    end
+
+    # 1) First try to detect whether we have legacy style core count encoding
+    #    This is also correct for AMD, but not for modern Intel.
+    #    nc = ((cpuid(0x0000_0001)[2] >> 16) % 8)
+    #    if !iszero(nc) return nc
+    # 2) Try the modern intel extended information
 
     leaf = 0x0000_000b
     hasleaf(leaf) || return zero(UInt32)
@@ -547,9 +614,16 @@ function cpucores_total() ::Int
         lt != 0x02 && continue
         nc = ebx & 0xffff
     end
-    nc
+
+    return iszero(nc) ? # no cores detected? then maybe its AMD?
+        # AMD 
+        ((cpuid(0x0000_0001)[2] >> 16) & 0x00ff) :
+        # Intel
+        (nc)
+
 end
 
+@deprecate cpucores_total() cputhreads()
 
 """
     address_size()
@@ -630,6 +704,17 @@ end
 
 @noinline function cachesize()
 
+    function cachesize_level(leaf, sl::UInt32)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
+        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
+        eax & 0x1f == 0 && return ()
+        # could do a sanity check: cache level reported in eax bits 5:7
+        # if lowest bit on eax is zero, then its not a data cache
+        eax & 0x01 == 0 && return cachesize_level(leaf, sl + one(UInt32))
+        # otherwise this should be a valid data or shared cache level
+        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(leaf, sl + one(UInt32))...)
+    end
+
     # TODO: This function fails compilation if inlined.
 
     # TODO: This is awkwardly slow and requires some rework.
@@ -637,23 +722,15 @@ end
     #       allocate a small array, then fill the array when leaving each
     #       recursion level.
 
+    # AMD Exteneded Cache
+    leaf = 0x8000_001d
+    hasleaf(leaf) && cpufeature(TOPX) &&
+        return (cachesize_level(leaf,zero(UInt32))...,)
+    # Intel
     leaf = 0x0000_0004
-    hasleaf(leaf) || return ()
-
-    # Called recursively until the first level gives zero cache size
-
-    function cachesize_level(sl::UInt32)
-        eax, ebx, ecx, edx = cpuid(leaf, sl)
-        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
-        eax & 0x1f == 0 && return ()
-        # could do a sanity check: cache level reported in eax bits 5:7
-        # if lowest bit on eax is zero, then its not a data cache
-        eax & 0x01 == 0 && return cachesize_level(sl + one(UInt32))
-        # otherwise this should be a valid data or shared cache level
-        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(sl + one(UInt32))...)
-    end
-
-    (cachesize_level(zero(UInt32))...,)
+    hasleaf(leaf) && return (cachesize_level(leaf,zero(UInt32))...,)
+    # no cache data available
+    ()
 end
 
 @inline cachesize(lvl::Integer) = cachesize(UInt32(lvl))
@@ -869,15 +946,17 @@ function cpuinfo()
     cache   = string("Level ", 1:length(cachesz), " : ", map(x->div(x,1024), cachesz), " kbytes")
     cachels = string(cachelinesize(), " byte cache line size")
     cores = string( CpuId.cpucores(), " physical cores, "
-                  , CpuId.cpucores_total(), " logical cores (on executing CPU)")
+                  , CpuId.cputhreads(), " logical cores (on executing CPU)")
     frequencies = !has_cpu_frequencies() ? unsupported :
                         string(cpu_base_frequency(), " / ",
                                cpu_max_frequency(), " MHz (base/max), ",
                                cpu_bus_frequency(), " MHz bus")
-    hyperthreading = (CpuId.cpucores() == CpuId.cpucores_total() ?  "No " : "") * "Hyperthreading detected"
+    hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading detected"
     hypervisor = hypervised() ? "Yes, $(hvvendor())" : "No"
-    model = string("Family: ", modelfl[:Family], ", Model: ", modelfl[:Model],
-                   ", Stepping: ", modelfl[:Stepping], ", Type: ", modelfl[:CpuType])
+    model = string("Family: 0x",     string(modelfl[:Family],   base=16, pad=2),
+                   ", Model: 0x",    string(modelfl[:Model],    base=16, pad=2),
+                   ", Stepping: 0x", string(modelfl[:Stepping], base=16, pad=2),
+                   ", Type: 0x",     string(modelfl[:CpuType],  base=16, pad=2))
     simd = string(simdbits(), " bit = ", simdbytes(), " byte max. SIMD vector size" )
     tsc = string("TSC is ", (cpufeature(TSC) ? "" : "not "), "accessible via `rdtsc`")
     tscinv = cpufeature(TSCINV) ? "TSC runs at constant rate (invariant from clock frequency)" :
