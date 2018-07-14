@@ -34,34 +34,38 @@ Note: Expected to work on all CPUs that implement the assembly instruction
 function cpuid end
 
 # Convenience function allowing passing other than UInt32 values
-cpuid( leaf   ::Integer=zero(UInt32)
-             , subleaf::Integer=zero(UInt32)) = cpuid(UInt32(leaf), UInt32(subleaf))
+function cpuid(leaf=0, subleaf=0)
 
-# Low level cpuid call, taking eax=leaf and ecx=subleaf,
-# returning eax, ebx, ecx, edx as NTuple(4,UInt32)
-@noinline cpuid(leaf::UInt32, subleaf::UInt32) =
-    llvmcall("""
-        ; leaf = %0, subleaf = %1, %2 is some label
-        ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
-        %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid",
-             "={ax},={bx},={cx},={dx},{ax},{cx},~{dirflag},~{fpsr},~{flags}"
-             (i32 %0, i32 %1) #2
-        ; retrieve the result values and convert to vector [4 x i32]
-        %4 = extractvalue { i32, i32, i32, i32 } %3, 0
-        %5 = extractvalue { i32, i32, i32, i32 } %3, 1
-        %6 = extractvalue { i32, i32, i32, i32 } %3, 2
-        %7 = extractvalue { i32, i32, i32, i32 } %3, 3
-        ; return the values as a new tuple
-        %8  = insertvalue [4 x i32] undef, i32 %4, 0
-        %9  = insertvalue [4 x i32]   %8 , i32 %5, 1
-        %10 = insertvalue [4 x i32]   %9 , i32 %6, 2
-        %11 = insertvalue [4 x i32]  %10 , i32 %7, 3
-        ret [4 x i32] %11
-    """
-    # llvmcall requires actual types, rather than the usual (...) tuple
-    , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
-    , leaf, subleaf)
+    # Low level cpuid call, taking eax=leaf and ecx=subleaf,
+    # returning eax, ebx, ecx, edx as NTuple(4,UInt32)
+    @inline cpuid_llvm(leaf::UInt32, subleaf::UInt32) =
+        llvmcall("""
+            ; leaf = %0, subleaf = %1, %2 is some label
+            ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
+            %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid",
+                "={ax},={bx},={cx},={dx},{ax},{cx},~{dirflag},~{fpsr},~{flags}"
+                (i32 %0, i32 %1) #2
+            ; retrieve the result values and convert to vector [4 x i32]
+            %4 = extractvalue { i32, i32, i32, i32 } %3, 0
+            %5 = extractvalue { i32, i32, i32, i32 } %3, 1
+            %6 = extractvalue { i32, i32, i32, i32 } %3, 2
+            %7 = extractvalue { i32, i32, i32, i32 } %3, 3
+            ; return the values as a new tuple
+            %8  = insertvalue [4 x i32] undef, i32 %4, 0
+            %9  = insertvalue [4 x i32]   %8 , i32 %5, 1
+            %10 = insertvalue [4 x i32]   %9 , i32 %6, 2
+            %11 = insertvalue [4 x i32]  %10 , i32 %7, 3
+            ret [4 x i32] %11
+        """
+        # llvmcall requires actual types, rather than the usual (...) tuple
+        , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
+        , leaf, subleaf)
 
+    # for some reason, we need a dedicated local
+    # variable of UInt32 for llvmcall to succeed
+    l, s = UInt32(leaf), UInt32(subleaf)
+    cpuid_llvm(l, s) ::NTuple{4,UInt32}
+end
 
 @inline rdtsc() =
     llvmcall("""

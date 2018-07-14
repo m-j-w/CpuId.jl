@@ -91,20 +91,20 @@ end
 
 # Dump the cpuid table of the executing CPU
 include("mock.jl")
+include("mockdb.jl")
+
 dump_cpuid_table() ; flush(stdout) ; flush(stderr)
 
 print("\n\n-----\nMocking CpuId\n-----\n\n")
 flush(stdout) ; flush(stderr)
 
 # Run the known cpuid records
-include("mockdb.jl")
-
 @testset "Mocking" begin
     for i in 1:length(_mockdb)
         # temporarily replace the low-level cpuid function with known records
-        mock_cpuid(i)
         eval(quote
             @testset "Mocked #$($i) $(strip(cpubrand()))" begin
+                mock_cpuid($i)
                 flush(stdout) ; flush(stderr)
                 @test isa( cpubrand()       , String )
                 @test isa( cpuinfo()        , MD )
@@ -112,16 +112,17 @@ include("mockdb.jl")
                 @test isa( hvinfo()         , MD )
                 println("Tested recorded cpuid table #",$i," for '", strip(cpubrand()), "'")
 
-                for p in last(_mockdb[$i])
-                    fns, res = p
+                for (fns, res) in last(_mockdb[$i])
                     if isa(res, Tuple) && length(res) > 0 && first(res) === :broken
                         @test_broken getfield(CpuId, fns)() == last(res)
                     else
                         @test getfield(CpuId, fns)() == res
                     end
                 end
+        
             end
         end)
+
         #dump_cpuid_table()
         flush(stdout) ; flush(stderr)
     end

@@ -38,7 +38,7 @@ function mock_cpuid(idx::Integer)
         get( first(_mockdb[idx]), (UInt32(eax), UInt32(ecx))
            , (zero(UInt32), zero(UInt32), zero(UInt32), zero(UInt32),) )
 
-    CpuInstructions.eval( :(cpuid(eax::UInt32, ecx::UInt32) = $_fake_cpuid(eax, ecx) ) )
+    CpuInstructions.eval( :(cpuid(eax=0, ecx=0) = $_fake_cpuid(eax, ecx) ) )
 end
 
 
@@ -61,9 +61,6 @@ function dump_cpuid_table()
             println("    (",(leaf, 0x0000_0000), " => ", CpuId.cpuid(leaf), "),")
         end
     end
-
-    # Now add the ones with sub-leaves
-    # TODO: This is should be a little bit more precise.
 
     leaf = 0x0000_0004
     if CpuId.hasleaf(leaf)
