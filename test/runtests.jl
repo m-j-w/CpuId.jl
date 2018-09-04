@@ -116,7 +116,7 @@ flush(stdout) ; flush(stderr)
                         @test getfield(CpuId, fns)() == res
                     end
                 end
-        
+
             end
         end)
 

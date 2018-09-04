@@ -105,12 +105,12 @@ function cpumodel() ::Dict{Symbol, UInt8}
     #  Ext.Model:  16:19
     #  Ext.Family: 20:27
     eax, ebx, ecx, edx = cpuid(0x01)
-    Dict( :Family    => UInt8((eax & 0x0000_0f00 >> 8)
-                             +(eax & 0x0ff0_0000 >> (20-4)))
-        , :Model     => UInt8((eax & 0x0000_00f0 >> 4)
-                             +(eax & 0x000f_0000 >> (16-4)))
+    Dict( :Family    => UInt8(((eax & 0x0000_0f00) >> 8)
+                             +((eax & 0x0ff0_0000) >> (20-4)))
+        , :Model     => UInt8(((eax & 0x0000_00f0) >> 4)
+                             +((eax & 0x000f_0000) >> (16-4)))
         , :Stepping  =>  UInt8(eax & 0x0000_000f)
-        , :CpuType   =>  UInt8(eax & 0x0000_3000 >> 12))
+        , :CpuType   =>  UInt8((eax & 0x0000_3000) >> 12))
 end
 
 
@@ -409,7 +409,7 @@ function cpuarchitecture() ::Symbol
     family == 0x6f && return :Bulldozer
     family == 0x7f && return (model == 0x30) ? :Puma : :Jaguar
     family == 0x8f && return :Zen
-    
+
     return :Unknown
 end
 
@@ -518,7 +518,7 @@ function cpucores() ::Int
     end
 
     return iszero(nc) ? # no cores detected? then maybe its AMD?
-        # AMD 
+        # AMD
         ((cpuid(0x8000_0008)[3] & 0x00ff)+1) :
         # Intel, we need nonzero values of nc and nl
         (iszero(nl) ? nc : nc ÷ nl)
@@ -617,7 +617,7 @@ function cputhreads() ::Int
     end
 
     return iszero(nc) ? # no cores detected? then maybe its AMD?
-        # AMD 
+        # AMD
         ((cpuid(0x0000_0001)[2] >> 16) & 0x00ff) :
         # Intel
         (nc)
