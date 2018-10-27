@@ -388,7 +388,7 @@ function cpufeature(feature::CpuFeature) ::Bool
 end
 
 # Convenience overload to use symbol notatation
-cpufeature(feat::Symbol) = cpufeature( eval(feat) )
+cpufeature(feat::Symbol) = cpufeature( getfield(CpuId, feat) )
 
 
 """
@@ -407,7 +407,7 @@ Get a list of symbols of all cpu supported features.  Might be extensive and
 not exactly useful other than for testing purposes.  Also, this implementation
 is not efficient since each feature is queried independently.
 """
-cpufeatures() = Symbol[f for f in keys(CpuFeatureDescription) if cpufeature(eval(f))] |> sort
+cpufeatures() = Symbol[f for f in keys(CpuFeatureDescription) if cpufeature(getfield(CpuId, f))] |> sort
 
 
 """
