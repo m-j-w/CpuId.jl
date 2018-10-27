@@ -77,6 +77,7 @@ Hint: This function is extremely efficient when inlined into your own code.
       current (and possible non-constant) CPU clock frequency.
 """
 function cpucycle end
+@eval cpucycle() = $(cpufeature(TSC) ? rdtsc() : zero(UInt64))
 
 
 """
@@ -89,6 +90,7 @@ detect if the code has been moved to a different executing CPU.  See also the
 comments for `cpucycle()` which equally apply.
 """
 function cpucycle_id end
+@eval cpucycle_id() = $(cpufeature(RDTSCP) ? rdtscp() : (zero(UInt64),zero(UInt64)))
 
 
 """
@@ -993,26 +995,6 @@ function cpuinfo()
                                 ibs...,
         [ "Hypervisor",         hypervisor           ],
        ], [:l, :l] ) )
-end
-
-
-"""
-Enables and disables a few functions depending on whether the features are
-actually available.  This should overcome a potential efficiency issue when
-calling those functions in a hot zone.
-"""
-function __init__()
-    # Do we have priviledged access to `rdtsc` instructions?
-    if (cpufeature(TSC))
-        eval(:(cpucycle()    = rdtsc()))
-    else
-        eval(:(cpucycle()    = zero(UInt64)))
-    end
-    if (cpufeature(RDTSCP))
-        eval(:(cpucycle_id() = rdtscp()))
-    else
-        eval(:(cpucycle_id() = (zero(UInt64),zero(UInt64))))
-    end
 end
 
 
