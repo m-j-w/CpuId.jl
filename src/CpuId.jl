@@ -77,7 +77,7 @@ Hint: This function is extremely efficient when inlined into your own code.
       current (and possible non-constant) CPU clock frequency.
 """
 function cpucycle end
-@eval cpucycle() = $(cpufeature(TSC) ? rdtsc() : zero(UInt64))
+@eval cpucycle() = $(cpufeature(TSC)) ? rdtsc() : zero(UInt64)
 
 
 """
@@ -90,7 +90,7 @@ detect if the code has been moved to a different executing CPU.  See also the
 comments for `cpucycle()` which equally apply.
 """
 function cpucycle_id end
-@eval cpucycle_id() = $(cpufeature(RDTSCP) ? rdtscp() : (zero(UInt64),zero(UInt64)))
+@eval cpucycle_id() = $(cpufeature(RDTSCP)) ? rdtscp() : (zero(UInt64),zero(UInt64))
 
 
 """
