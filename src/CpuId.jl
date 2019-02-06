@@ -128,7 +128,7 @@ the hypervisor is free to decide which information to pass.
 """
 function hypervised() ::Bool
     # alternative: 0x8000_000a, eax bit 8 set if hv present.
-    eax, ebx, ecx, edx = cpuid(0x01)
+    eax, ebx, ecx, edx = cpuid(0x0000_0001)
     ((ecx >> 31) & one(UInt32)) != zero(UInt32)
 end
 
@@ -449,13 +449,13 @@ function simdbytes() ::Int
     simd = 0
 
     if hasleaf(0x0000_0007)
-        eax, ebx, ecx, edx = cpuid(0x07)
+        eax, ebx, ecx, edx = cpuid(0x0000_0007)
         simd = ebx & (1<<16) != 0 ? 512 ÷ 8 :  # AVX512F instruction set
                ebx & (1<< 5) != 0 ? 256 ÷ 8 : 0   # AVX2
     end
 
     if simd == 0
-        eax, ebx, ecx, edx = cpuid(0x01)
+        eax, ebx, ecx, edx = cpuid(0x0000_0001)
         simd = ecx & (1<<28) != 0 ? 256 ÷ 8 :     # AVX
             edx & (1<<26) != 0 ? 128 ÷ 8 :     # SSE2
             edx & (1<<25) != 0 ? 128 ÷ 8 :     # SSE
@@ -718,8 +718,6 @@ function cachesize()
         # otherwise this should be a valid data or shared cache level
         (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(leaf, sl + one(UInt32))...)
     end
-
-    # TODO: This function fails compilation if inlined.
 
     # TODO: This is awkwardly slow and requires some rework.
     #       Potential approach: Recurse to the last found cache level, there
