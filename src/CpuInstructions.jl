@@ -35,13 +35,13 @@ function cpuid end
 
 # Low level cpuid call, taking eax=leaf and ecx=subleaf,
 # returning eax, ebx, ecx, edx as NTuple(4,UInt32)
-@noinline cpuid_llvm(leaf::UInt32, subleaf::UInt32) =
+@inline cpuid_llvm(leaf::UInt32, subleaf::UInt32) =
     llvmcall("""
         ; leaf = %0, subleaf = %1, %2 is some label
         ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
         %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid",
             "={ax},={bx},={cx},={dx},{ax},{cx},~{dirflag},~{fpsr},~{flags}"
-            (i32 %0, i32 %1) #2
+            (i32 %0, i32 %1)
         ; retrieve the result values and convert to vector [4 x i32]
         %4 = extractvalue { i32, i32, i32, i32 } %3, 0
         %5 = extractvalue { i32, i32, i32, i32 } %3, 1
@@ -68,7 +68,7 @@ end
 
 @inline rdtsc() =
     llvmcall("""
-        %1 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() #2
+        %1 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"()
         %2 = extractvalue { i32, i32 } %1, 0
         %3 = extractvalue { i32, i32 } %1, 1
         %4 = zext i32 %2 to i64
@@ -82,7 +82,7 @@ end
 
 @inline rdtscp() =
     llvmcall("""
-        %1 = tail call { i32, i32, i32 } asm sideeffect "rdtscp", "={ax},={dx},={cx},~{dirflag},~{fpsr},~{flags}"() #2
+        %1 = tail call { i32, i32, i32 } asm sideeffect "rdtscp", "={ax},={dx},={cx},~{dirflag},~{fpsr},~{flags}"()
         %2 = extractvalue { i32, i32, i32 } %1, 0
         %3 = extractvalue { i32, i32, i32 } %1, 1
         %4 = zext i32 %2 to i64

@@ -995,6 +995,11 @@ function cpuinfo()
        ], [:l, :l] ) )
 end
 
+function cpuinfo_mwe()
+    CpuInstructions.cpuid_llvm(0x8000_0000,0x0000_0000)
+    ([ [0] ], [ ])
+end
+
 
 end # module CpuId
 
