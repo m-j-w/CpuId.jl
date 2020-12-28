@@ -14,7 +14,7 @@ export cpuvendor, cpubrand, cpumodel, cachesize, cachelinesize,
        hvinfo, cpucores, cputhreads, cpucycle, cpucycle_id,
        perf_revision, perf_fix_counters, perf_fix_bits, perf_gen_counters,
        perf_gen_bits, cpuinfo, cpufeature, cpufeatures, cpufeaturedesc,
-       cpufeaturetable, cpuarchitecture
+       cpufeaturetable, cpuarchitecture, cacheinclusive
 
 using Markdown: MD, Table, parse
 const MarkdownString = MD     # Rename Markdown constructors
@@ -763,6 +763,80 @@ function cachesize(lvl::UInt32) ::Int
         # and is it the correct level, eax[5:7]?
         (eax & 0x01 == 0x01) && ((eax >> 5) & 0x07) == lvl &&
             return __datacachesize(eax, ebx, ecx)
+        sl += one(UInt32)
+    end
+end
+
+
+"""
+    cacheinclusive()
+    cacheinclusive(lvl::Integer)
+
+Obtain information on the CPU's *data* cache inclusiveness. Returns `true`
+for a cache that is inclusive of the lower cache levels, and `false` otherwise. 
+
+Determine the data cache size for each cache level as reported by the CPU
+using a set of calls to the `cpuid` instruction.  Returns a tuple with the
+tuple indices matching the cache levels.
+
+If given an integer, then the data cache inclusiveness of the respective cache level
+will be returned.  This is significantly faster than the tuple version above.
+"""
+function cacheinclusive end
+
+
+function cacheinclusive()
+
+    function cacheinclusive_level(leaf, sl::UInt32)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
+        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
+        eax & 0x1f == 0 && return ()
+        # could do a sanity check: cache level reported in eax bits 5:7
+        # if lowest bit on eax is zero, then its not a data cache
+        eax & 0x01 == 0 && return cacheinclusive_level(leaf, sl + one(UInt32))
+        # otherwise this should be a valid data or shared cache level
+        ((edx & 0x02) != 0x00, cacheinclusive_level(leaf, sl + one(UInt32))...)
+    end
+
+    # TODO: This is awkwardly slow and requires some rework.
+    #       Potential approach: Recurse to the last found cache level, there
+    #       allocate a small array, then fill the array when leaving each
+    #       recursion level.
+
+    leaf = 0x0000_0004
+    hasleaf(leaf) && return (cacheinclusive_level(leaf,zero(UInt32))...,)
+    # no cache data available
+    ()
+end
+
+cacheinclusive(lvl::Integer) = cacheinclusive(UInt32(lvl))
+
+function cacheinclusive(lvl::UInt32) ::Int
+    @_inline_meta
+
+    lvl == 0 && return false
+
+    leaf = 0x0000_0004
+    hasleaf(leaf) || _throw_unsupported_leaf(leaf)
+
+    # Loop over all subleaves of leaf 0x04 until the cache level bits say
+    # we've reached to target level, then check whether it's a data cache or
+    # shared cache.
+
+    # Assuming cache enumeration is linear, it is sufficient to start at
+    # sub-leaf 'lvl'. This should limit looping to at most two iterations.
+    # Though it might fail... Let's see if there are bug reports for weird
+    # architectures.
+    sl = lvl - one(UInt32)
+
+    while (true)
+        eax, ebx, ecx, edx = cpuid(leaf, sl)
+        # still at a valid cache level ?
+        eax & 0x1f == 0 && return false
+        # is this a data cache or shared cache level, eax[0:4]?
+        # and is it the correct level, eax[5:7]?
+        (eax & 0x01 == 0x01) && ((eax >> 5) & 0x07) == lvl &&
+            return (edx & 0x02) != 0x00
         sl += one(UInt32)
     end
 end
