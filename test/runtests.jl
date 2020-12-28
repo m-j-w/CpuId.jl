@@ -45,6 +45,10 @@ using Markdown: MD
     for i in 0:5
         @test isa( cachesize(i)       , Integer )
     end
+    @test isa( cacheinclusive()       , Tuple )
+    for i in 0:5
+        @test isa( cacheinclusive(i)  , Integer )
+    end
     @test isa( cpuarchitecture()      , Symbol )
     @test isa( cpubrand()             , String )
     @test isa( cpumodel()             , Dict )
