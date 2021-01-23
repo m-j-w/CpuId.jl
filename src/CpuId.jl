@@ -35,10 +35,8 @@ using .CpuInstructions: cpuid, rdtsc, rdtscp
 """
 Helper function, tagged noinline to not have detrimental effect on performance.
 """
-function _throw_unsupported_leaf(leaf)
-    @_noinline_meta
+@noinline _throw_unsupported_leaf(leaf) =
     error("This CPU does not provide information on cpuid leaf 0x$(string(leaf, base=16, pad=8)).")
-end
 
 
 """
@@ -706,7 +704,9 @@ function __datacachesize(eax::UInt32, ebx::UInt32, ecx::UInt32) ::UInt32
 end
 
 
-function cachesize()
+@noinline function cachesize()
+
+    # TODO: This function fails compilation if inlined.
 
     function cachesize_level(leaf, sl::UInt32)
         eax, ebx, ecx, edx = cpuid(leaf, sl)
@@ -771,14 +771,11 @@ end
 """
     cacheinclusive()
     cacheinclusive(lvl::Integer)
-
 Obtain information on the CPU's *data* cache inclusiveness. Returns `true`
 for a cache that is inclusive of the lower cache levels, and `false` otherwise. 
-
 Determine the data cache size for each cache level as reported by the CPU
 using a set of calls to the `cpuid` instruction.  Returns a tuple with the
 tuple indices matching the cache levels.
-
 If given an integer, then the data cache inclusiveness of the respective cache level
 will be returned.  This is significantly faster than the tuple version above.
 """
@@ -1028,7 +1025,7 @@ function cpuinfo()
                         string(cpu_base_frequency(), " / ",
                                cpu_max_frequency(), " MHz (base/max), ",
                                cpu_bus_frequency(), " MHz bus")
-    hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading detected"
+    hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading hardware capability detected"
     hypervisor = hypervised() ? "Yes, $(hvvendor())" : "No"
     model = string("Family: 0x",     string(modelfl[:Family],   base=16, pad=2),
                    ", Model: 0x",    string(modelfl[:Model],    base=16, pad=2),
