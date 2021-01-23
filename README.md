@@ -4,14 +4,12 @@
 query the availability of specific CPU features with low run-time cost
 using the assembly instruction `cpuid`.
 
-Test                     | Status
--------------------------|----------------------
-Windows 32/64 bit Build  | [![Build Status](https://ci.appveyor.com/api/projects/status/q34wl2a441dy87gy?svg=true)](https://ci.appveyor.com/project/m-j-w/cpuid-jl)
- Linux and Mac Build     | [![Build Status](https://travis-ci.org/m-j-w/CpuId.jl.svg?branch=master)](https://travis-ci.org/m-j-w/CpuId.jl)
- Julia Metadata Tests    | [![CpuId](http://pkg.julialang.org/badges/CpuId_0.7.svg)](http://pkg.julialang.org/?pkg=CpuId)
-Code Coverage            | [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/m-j-w/CpuId.jl)
+Test                        | Status
+----------------------------|----------------------
+Windows, Linux & Mac Build  | [![Build Status](https://travis-ci.org/m-j-w/CpuId.jl.svg?branch=master)](https://travis-ci.org/m-j-w/CpuId.jl)
+Code Coverage               | [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/m-j-w/CpuId.jl)
 
-_Status: considered a pre-beta version, ready for you to try out._
+_Status: considered a beta version for the core functionality, ready for you to try out._
 
 Works on Julia 1.0 and later, on Linux, Mac and Windows with Intel CPUs
 and AMD CPUs.  Other processor types like ARM are _not_ supported.
@@ -123,6 +121,8 @@ This release covers a selection of fundamental and higher level functionality:
  - `cachelinesize()` gives the size in bytes of one cache line, which is
      typically 64 bytes.
  - `cachesize()` returns a tuple with the sizes of the data caches in bytes.
+ - `cacheinclusive()` returns a tuple indicating lower cache levels being
+    included in the data cache sizes reported by `cachesize()`.
  - `cpu_base_frequency()`, `cpu_max_frequency()`, `cpu_bus_frequency()` give -
      if supported by the CPU, the base, maximum and bus clock frequencies.
      Use `has_cpu_frequencies()` to check whether this property is supported.
