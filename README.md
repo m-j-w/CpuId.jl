@@ -174,7 +174,18 @@ the operating system obtain that kind information.  However, this would require
 additional external or operating system dependent code which is not the scope of
 this package.
 
-#### Specific limitations
+#### Specific limitations and caveats
+
+- The number of physical cores and logical cores reported by `CpuId` seems wrong!
+    If you have multiple processors on your motherboard, then `CpuId` will
+    always only give you information for the processor the current task is running
+    on.  For example: You have 2 processors, each with 12 physical cores and 24
+    logical cores (thus with hyperthreading).  While you have in total 48 logical
+    cores on both processors, `CpuId` will only give you 24 logical and 12 physical
+    cores from the one it is running on.
+    Resolving this is outside the scope of this Julia module, since it requires
+    additional other operating system dependent functions, pinning the current
+    task to a specific CPU, or querying other BIOS related functions.
 
 - Why aren't all infos available that are seen e.g. in `/proc/cpuinfo`?
     Many of those features, flags and properties reside in the so called machine
