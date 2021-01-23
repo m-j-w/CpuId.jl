@@ -490,8 +490,8 @@ Also, this function does not take logical cores (aka hyperthreading) into
 account, but determines the true number of physical cores, which typically
 also share L3 caches and main memory bandwidth.
 
-See also the Julia global variable `Base.Sys.CPU_CORES`, which gives the total
-count of all cores on the machine.
+See also the Julia global variable `Base.Sys.CPU_THREADS`, which gives the
+total count of all logical cores on the machine.
 """
 function cpucores() ::Int
 
@@ -578,9 +578,9 @@ hyperthreading into account.  For practical purposes, only I/O intensive code
 should make use of these total number of cores; memory or computation bound
 code will not benefit, but rather experience a detrimental effect.
 
-See also Julia's global variable `Base.Sys.CPU_CORES`, which gives the total
-count of all cores on the machine.  Thus, `Base.Sys.CPU_CORES ÷
-CpuId.cputhreads()` gives you the number of CPUs (packages) in your
+See also Julia's global variable `Base.Sys.CPU_THREADS`, which gives the total
+count of all logical cores on the machine.  Thus, `Base.Sys.CPU_THREADS ÷
+CpuId.cputhreads()` should give you the number of CPUs (packages) in your
 system.
 """
 function cputhreads() ::Int
