@@ -1,11 +1,7 @@
 name = "CpuId"
 uuid = "adafc99b-e345-5852-983c-f28acb93d879"
 authors = ["Markus J. Weber"]
-<<<<<<< 8ffa33d5bea45cc6d25212bde3c1247a539c1a1e
 version = "0.2.3"
-=======
-version = "0.1.11"
->>>>>>> Version, Docs
 
 [deps]
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
