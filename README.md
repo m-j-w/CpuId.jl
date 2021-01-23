@@ -13,8 +13,8 @@ Code Coverage            | [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/bran
 
 _Status: considered a pre-beta version, ready for you to try out._
 
-Works on Julia 0.7, on Linux, Mac and Windows with Intel CPUs;
-support for AMD CPUs is in preparation.
+Works on Julia 1.0 and later, on Linux, Mac and Windows with Intel CPUs
+and AMD CPUs.  Other processor types like ARM are _not_ supported.
 
 
 ## Motivation

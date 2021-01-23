@@ -771,14 +771,11 @@ end
 """
     cacheinclusive()
     cacheinclusive(lvl::Integer)
-
 Obtain information on the CPU's *data* cache inclusiveness. Returns `true`
 for a cache that is inclusive of the lower cache levels, and `false` otherwise. 
-
 Determine the data cache size for each cache level as reported by the CPU
 using a set of calls to the `cpuid` instruction.  Returns a tuple with the
 tuple indices matching the cache levels.
-
 If given an integer, then the data cache inclusiveness of the respective cache level
 will be returned.  This is significantly faster than the tuple version above.
 """
@@ -798,7 +795,15 @@ function cacheinclusive()
         ((edx & 0x02) != 0x00, cacheinclusive_level(leaf, sl + one(UInt32))...)
     end
 
-    (cachesize_level(zero(UInt32))...,)
+    # TODO: This is awkwardly slow and requires some rework.
+    #       Potential approach: Recurse to the last found cache level, there
+    #       allocate a small array, then fill the array when leaving each
+    #       recursion level.
+
+    leaf = 0x0000_0004
+    hasleaf(leaf) && return (cacheinclusive_level(leaf,zero(UInt32))...,)
+    # no cache data available
+    ()
 end
 
 cacheinclusive(lvl::Integer) = cacheinclusive(UInt32(lvl))
@@ -1020,7 +1025,7 @@ function cpuinfo()
                         string(cpu_base_frequency(), " / ",
                                cpu_max_frequency(), " MHz (base/max), ",
                                cpu_bus_frequency(), " MHz bus")
-    hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading detected"
+    hyperthreading = (CpuId.cpucores() == CpuId.cputhreads() ?  "No " : "") * "Hyperthreading hardware capability detected"
     hypervisor = hypervised() ? "Yes, $(hvvendor())" : "No"
     model = string("Family: 0x",     string(modelfl[:Family],   base=16, pad=2),
                    ", Model: 0x",    string(modelfl[:Model],    base=16, pad=2),

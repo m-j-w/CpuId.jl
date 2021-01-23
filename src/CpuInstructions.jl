@@ -34,8 +34,12 @@ Note: Expected to work on all CPUs that implement the assembly instruction
 function cpuid end
 
 # Convenience function allowing passing other than UInt32 values
-cpuid( leaf::Integer=zero(UInt32)
-             , subleaf::Integer=zero(UInt32)) = cpuid(UInt32(leaf), UInt32(subleaf))
+function cpuid(leaf=0, subleaf=0)
+    # for some reason, we need a dedicated local
+    # variable of UInt32 for llvmcall to succeed
+    l, s = UInt32(leaf), UInt32(subleaf)
+    cpuid_llvm(l, s) ::NTuple{4,UInt32}
+end
 
 #
 #   TODO:
@@ -67,14 +71,6 @@ cpuid( leaf::Integer=zero(UInt32)
     # llvmcall requires actual types, rather than the usual (...) tuple
     , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
     , leaf, subleaf)
-
-# Convenience function allowing passing other than UInt32 values
-function cpuid(leaf=0, subleaf=0)
-    # for some reason, we need a dedicated local
-    # variable of UInt32 for llvmcall to succeed
-    l, s = UInt32(leaf), UInt32(subleaf)
-    cpuid_llvm(l, s) ::NTuple{4,UInt32}
-end
 
 @inline rdtsc() =
     llvmcall("""
