@@ -218,10 +218,10 @@ a summary by simply typing `cpuid`.
 
 Then, of course, there are a few functions in Julia Base. These are
 `Base.Sys.cpu_info()`, and `Base.Sys.cpu_summary()`, as well as the global
-variables `Base.Sys.CPU_CORES`, and `Base.Sys.cpu_name`.  These are mostly
-provided by wrapping *libuv*.  In particular `CPU_CORES` is the reason for this
-module: It's intrinsically unclear whether that number includes hyperthreading
-cores, or whether it is referring to real physical cores of the current machine.
+variable `Base.Sys.CPU_THREADS`.  These are mostly provided by wrapping *libuv*.
+In particular `CPU_THREADS` is the reason for this module: This reports the
+number of logical cores, but how many physical cores do you have that you would
+want to run your code on?
 
 The Julia package [Hwloc.jl](https://github.com/JuliaParallel/Hwloc.jl) provides
 similar and more information primarily directed towards the topology of your
