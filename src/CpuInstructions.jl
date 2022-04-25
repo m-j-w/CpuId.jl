@@ -47,63 +47,80 @@ end
 #   Hence the @noinline.
 #
 
-# Low level cpuid call, taking eax=leaf and ecx=subleaf,
-# returning eax, ebx, ecx, edx as NTuple(4,UInt32)
-@noinline cpuid_llvm(leaf::UInt32, subleaf::UInt32) =
-    llvmcall("""
-        ; leaf = %0, subleaf = %1, %2 is some label
-        ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
-        %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid",
-            "={ax},={bx},={cx},={dx},{ax},{cx},~{dirflag},~{fpsr},~{flags}"
-            (i32 %0, i32 %1) #2
-        ; retrieve the result values and convert to vector [4 x i32]
-        %4 = extractvalue { i32, i32, i32, i32 } %3, 0
-        %5 = extractvalue { i32, i32, i32, i32 } %3, 1
-        %6 = extractvalue { i32, i32, i32, i32 } %3, 2
-        %7 = extractvalue { i32, i32, i32, i32 } %3, 3
-        ; return the values as a new tuple
-        %8  = insertvalue [4 x i32] undef, i32 %4, 0
-        %9  = insertvalue [4 x i32]   %8 , i32 %5, 1
-        %10 = insertvalue [4 x i32]   %9 , i32 %6, 2
-        %11 = insertvalue [4 x i32]  %10 , i32 %7, 3
-        ret [4 x i32] %11
-    """
-    # llvmcall requires actual types, rather than the usual (...) tuple
-    , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
-    , leaf, subleaf)
+#
+# Test Sys.ARCH for valid CPU architectures at compile time
+#
+@static if Sys.ARCH in (:x86, :x86_64)
 
-@inline rdtsc() =
-    llvmcall("""
-        %1 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() #2
-        %2 = extractvalue { i32, i32 } %1, 0
-        %3 = extractvalue { i32, i32 } %1, 1
-        %4 = zext i32 %2 to i64
-        %5 = zext i32 %3 to i64
-        %6 = shl nuw i64 %5, 32
-        %7 = or i64 %6, %4
-        ret i64 %7
-    """
-    , UInt64, Tuple{})
+    # Low level cpuid call, taking eax=leaf and ecx=subleaf,
+    # returning eax, ebx, ecx, edx as NTuple(4,UInt32)
+    @noinline cpuid_llvm(leaf::UInt32, subleaf::UInt32) =
+        llvmcall("""
+            ; leaf = %0, subleaf = %1, %2 is some label
+            ; call 'cpuid' with arguments loaded into registers EAX = leaf, ECX = subleaf
+            %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid",
+                "={ax},={bx},={cx},={dx},{ax},{cx},~{dirflag},~{fpsr},~{flags}"
+                (i32 %0, i32 %1) #2
+            ; retrieve the result values and convert to vector [4 x i32]
+            %4 = extractvalue { i32, i32, i32, i32 } %3, 0
+            %5 = extractvalue { i32, i32, i32, i32 } %3, 1
+            %6 = extractvalue { i32, i32, i32, i32 } %3, 2
+            %7 = extractvalue { i32, i32, i32, i32 } %3, 3
+            ; return the values as a new tuple
+            %8  = insertvalue [4 x i32] undef, i32 %4, 0
+            %9  = insertvalue [4 x i32]   %8 , i32 %5, 1
+            %10 = insertvalue [4 x i32]   %9 , i32 %6, 2
+            %11 = insertvalue [4 x i32]  %10 , i32 %7, 3
+            ret [4 x i32] %11
+        """
+        # llvmcall requires actual types, rather than the usual (...) tuple
+        , NTuple{4,UInt32}, Tuple{UInt32,UInt32}
+        , leaf, subleaf)
+
+    @inline rdtsc() =
+        llvmcall("""
+            %1 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() #2
+            %2 = extractvalue { i32, i32 } %1, 0
+            %3 = extractvalue { i32, i32 } %1, 1
+            %4 = zext i32 %2 to i64
+            %5 = zext i32 %3 to i64
+            %6 = shl nuw i64 %5, 32
+            %7 = or i64 %6, %4
+            ret i64 %7
+        """
+        , UInt64, Tuple{})
 
 
-@noinline rdtscp() =
-    llvmcall("""
-        %1 = tail call { i32, i32, i32 } asm sideeffect "rdtscp", "={ax},={dx},={cx},~{dirflag},~{fpsr},~{flags}"() #2
-        %2 = extractvalue { i32, i32, i32 } %1, 0
-        %3 = extractvalue { i32, i32, i32 } %1, 1
-        %4 = zext i32 %2 to i64
-        %5 = zext i32 %3 to i64
-        %6 = shl nuw i64 %5, 32
-        %7 = or i64 %6, %4
+    @noinline rdtscp() =
+        llvmcall("""
+            %1 = tail call { i32, i32, i32 } asm sideeffect "rdtscp", "={ax},={dx},={cx},~{dirflag},~{fpsr},~{flags}"() #2
+            %2 = extractvalue { i32, i32, i32 } %1, 0
+            %3 = extractvalue { i32, i32, i32 } %1, 1
+            %4 = zext i32 %2 to i64
+            %5 = zext i32 %3 to i64
+            %6 = shl nuw i64 %5, 32
+            %7 = or i64 %6, %4
 
-        %8 = extractvalue { i32, i32, i32 } %1, 2
-        %9 = zext i32 %8 to i64
+            %8 = extractvalue { i32, i32, i32 } %1, 2
+            %9 = zext i32 %8 to i64
 
-        %10 = insertvalue [2 x i64] undef, i64  %7, 0
-        %11 = insertvalue [2 x i64]  %10 , i64  %9, 1
-        ret [2 x i64] %11
-    """
-    , Tuple{UInt64,UInt64}, Tuple{})
+            %10 = insertvalue [2 x i64] undef, i64  %7, 0
+            %11 = insertvalue [2 x i64]  %10 , i64  %9, 1
+            ret [2 x i64] %11
+        """
+        , Tuple{UInt64,UInt64}, Tuple{})
+
+else  # Sys.ARCH  other than (:x86, :x86_64)
+
+    #
+    # Create fallback functions to avoid failing (pre-)compilations
+    #
+    @noinline cpuid_llvm(::UInt32, ::UInt32) =
+                    (zero(UInt32), zero(UInt32), zero(UInt32), zero(UInt32))
+    @inline   rdtsc()  = zero(UInt64)
+    @noinline rdtscp() = (zero(UInt64), zero(UInt64))
+
+end  # Sys.ARCH
 
 
 end # module CpuInstructions
