@@ -681,6 +681,8 @@ will be returned.  This is significantly faster than the tuple version above.
 Note that these are total cache sizes, where some cache levels are typically
 shared by multiple cpu cores, the higher cache levels may include lower levels.
 To print the cache levels in kbyte, use e.g. `CpuId.cachesize() .÷ 1024`.
+
+This functions throws an error if cache size detection is not supported.
 """
 function cachesize end
 
@@ -703,36 +705,39 @@ function __datacachesize(eax::UInt32, ebx::UInt32, ecx::UInt32) ::UInt32
     (1 +  ecx )                    # sets
 end
 
+"""
+Helper function to determine the cache size for a given subleaf `sl` on
+Intel or AMD Extended.
+"""
+function __cachesize_level(leaf::UInt32, sl::UInt32)
+    eax, ebx, ecx, edx = cpuid(leaf, sl)
+    # if eax is zero in the lowest 5 bits, we've reached the sentinel.
+    eax & 0x1f == 0 && return ()
+    # could do a sanity check: cache level reported in eax bits 5:7
+    # if lowest bit on eax is zero, then its not a data cache
+    eax & 0x01 == 0 && return __cachesize_level(leaf, sl + one(UInt32))
+    # otherwise this should be a valid data or shared cache level
+    (signed(__datacachesize(eax, ebx, ecx)), __cachesize_level(leaf, sl + one(UInt32))...)
+end
 
 @noinline function cachesize()
 
     # TODO: This function fails compilation if inlined.
 
-    function cachesize_level(leaf, sl::UInt32)
-        eax, ebx, ecx, edx = cpuid(leaf, sl)
-        # if eax is zero in the lowest 5 bits, we've reached the sentinel.
-        eax & 0x1f == 0 && return ()
-        # could do a sanity check: cache level reported in eax bits 5:7
-        # if lowest bit on eax is zero, then its not a data cache
-        eax & 0x01 == 0 && return cachesize_level(leaf, sl + one(UInt32))
-        # otherwise this should be a valid data or shared cache level
-        (signed(__datacachesize(eax, ebx, ecx)), cachesize_level(leaf, sl + one(UInt32))...)
-    end
+    # Determine the correct leaf id
+    std_leaf = 0x0000_0004
+    amd_leaf = 0x8000_001d
 
-    # TODO: This is awkwardly slow and requires some rework.
-    #       Potential approach: Recurse to the last found cache level, there
-    #       allocate a small array, then fill the array when leaving each
-    #       recursion level.
+    leaf =
+        if hasleaf(amd_leaf) && cpufeature(TOPX)
+            amd_leaf        # AMD Extended Cache
+        elseif hasleaf(std_leaf)
+            std_leaf        # Default Intel
+        else
+            _throw_unsupported_leaf(std_leaf)
+        end
 
-    # AMD Exteneded Cache
-    leaf = 0x8000_001d
-    hasleaf(leaf) && cpufeature(TOPX) &&
-        return (cachesize_level(leaf,zero(UInt32))...,)
-    # Intel
-    leaf = 0x0000_0004
-    hasleaf(leaf) && return (cachesize_level(leaf,zero(UInt32))...,)
-    # no cache data available
-    ()
+    return (__cachesize_level(leaf,zero(UInt32))...,)
 end
 
 cachesize(lvl::Integer) = cachesize(UInt32(lvl))
@@ -742,8 +747,18 @@ function cachesize(lvl::UInt32) ::Int
 
     lvl == 0 && return 0
 
-    leaf = 0x0000_0004
-    hasleaf(leaf) || _throw_unsupported_leaf(leaf)
+    # Determine the correct leaf id
+    std_leaf = 0x0000_0004
+    amd_leaf = 0x8000_001d
+
+    leaf =
+        if hasleaf(amd_leaf) && cpufeature(TOPX)
+            amd_leaf        # AMD Extended Cache
+        elseif hasleaf(std_leaf)
+            std_leaf        # Default Intel
+        else
+            _throw_unsupported_leaf(std_leaf)
+        end
 
     # Loop over all subleaves of leaf 0x04 until the cache level bits say
     # we've reached to target level, then check whether it's a data cache or
@@ -755,6 +770,7 @@ function cachesize(lvl::UInt32) ::Int
     # architectures.
     sl = lvl - one(UInt32)
 
+    # this is a variation of __cachesize_level
     while (true)
         eax, ebx, ecx, edx = cpuid(leaf, sl)
         # still at a valid cache level ?
@@ -763,6 +779,7 @@ function cachesize(lvl::UInt32) ::Int
         # and is it the correct level, eax[5:7]?
         (eax & 0x01 == 0x01) && ((eax >> 5) & 0x07) == lvl &&
             return __datacachesize(eax, ebx, ecx)
+        # not yet found, thus continue looking at next subleaf
         sl += one(UInt32)
     end
 end
