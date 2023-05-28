@@ -1087,6 +1087,12 @@ function cpuinfo()
 end
 
 
+# explicit precompilation only on Julia v1.9 and newer
+if VERSION >= v"1.9"
+    include("precompile.jl")
+end
+
+
 end # module CpuId
 
 #=--- end of file ---------------------------------------------------------=#
