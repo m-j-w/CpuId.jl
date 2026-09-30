@@ -1064,25 +1064,25 @@ function cpuinfo()
     ibs = !cpufeature(IBS) ? [] : [["", "CPU supports AMD's Instruction Based Sampling (IBS)"]]
 
     MarkdownString( MarkdownTable( [
-        [ "Cpu Property",       "Value"              ],
-        #----------------------------------------------
-        [ "Brand",              strip(cpubrand())    ],
-        [ "Vendor",             cpuvendor()          ],
-        [ "Architecture",       cpuarchitecture()    ],
-        [ "Model",              model                ],
-        [ "Cores",              cores                ],
-        [ "",                   hyperthreading       ],
-        [ "Clock Frequencies",  frequencies          ],
-        [ "Data Cache",         cache                ],
-        [ "",                   cachels              ],
-        [ "Address Size",       address              ],
-        [ "SIMD",               simd                 ],
-        [ "Time Stamp Counter", tsc                  ],
-        [ "",                   tscinv               ],
-        [ "Perf. Monitoring",   perfmon              ],
+        [ "Cpu Property",       "Value"                 ],
+        #-------------------------------------------------
+        [ "Brand",              strip(cpubrand())       ],
+        [ "Vendor",             repr(cpuvendor())       ],
+        [ "Architecture",       repr(cpuarchitecture()) ],
+        [ "Model",              model                   ],
+        [ "Cores",              cores                   ],
+        [ "",                   hyperthreading          ],
+        [ "Clock Frequencies",  frequencies             ],
+        [ "Data Cache",         cache                   ],
+        [ "",                   cachels                 ],
+        [ "Address Size",       address                 ],
+        [ "SIMD",               simd                    ],
+        [ "Time Stamp Counter", tsc                     ],
+        [ "",                   tscinv                  ],
+        [ "Perf. Monitoring",   perfmon                 ],
                                 perfmon2...,
                                 ibs...,
-        [ "Hypervisor",         hypervisor           ],
+        [ "Hypervisor",         hypervisor              ],
        ], [:l, :l] ) )
 end
 
