@@ -50,7 +50,7 @@ end
 #
 # Test Sys.ARCH for valid CPU architectures at compile time
 #
-@static if Sys.ARCH in (:x86, :x86_64)
+@static if Sys.ARCH in (:x86, :x86_64, :i686)
 
     # Low level cpuid call, taking eax=leaf and ecx=subleaf,
     # returning eax, ebx, ecx, edx as NTuple(4,UInt32)
