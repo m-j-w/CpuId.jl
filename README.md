@@ -6,7 +6,7 @@ using the assembly instruction `cpuid`.
 
 Test                        | Status
 ----------------------------|----------------------
-Windows, Linux & Mac Build  | [![Build Status](https://travis-ci.org/m-j-w/CpuId.jl.svg?branch=master)](https://travis-ci.org/m-j-w/CpuId.jl)
+Windows, Linux & Mac Build  | [![CI](https://github.com/m-j-w/CpuId.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/m-j-w/CpuId.jl/actions/workflows/ci.yml)
 Code Coverage               | [![codecov](https://codecov.io/gh/m-j-w/CpuId.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/m-j-w/CpuId.jl)
 
 _Status: considered a beta version for the core functionality, ready for you to try out._
