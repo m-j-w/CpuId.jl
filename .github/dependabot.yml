@@ -1,0 +1,22 @@
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: "monthly"
+    groups:
+      # Group all GitHub Actions PRs into a single PR:
+      all-github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "julia"
+    directories: # Location of Julia projects
+      - "/"
+    schedule:
+      interval: "daily"
+    groups:
+      # Group all Julia package updates into a single PR:
+      all-julia-packages:
+        patterns:
+          - "*"
