@@ -1,9 +1,24 @@
 using Test
 using Markdown: MD
 
-@testset "ReturnTypes" begin
+# Loading CpuId also checks that it precompiles on the current architecture,
+# see https://github.com/m-j-w/CpuId.jl/issues/67
+using CpuId
 
-    using CpuId
+# The `cpuid` instruction is only available on x86 CPUs
+const has_cpuid = Sys.ARCH in (:x86, :x86_64, :i686)
+
+if !has_cpuid
+    @testset "Fallbacks on $(Sys.ARCH)" begin
+        @test CpuId.cpuid() === (0x00000000, 0x00000000, 0x00000000, 0x00000000)
+        @test CpuId.hasleaf(0x00000004) === false
+        @test_throws ErrorException cachesize()
+        @test cpucycle() === zero(UInt64)
+        @test cpucycle_id() === (zero(UInt64), zero(UInt64))
+    end
+end
+
+has_cpuid && @testset "ReturnTypes" begin
 
     # Moved upwards temporarily for better diagnostics
     println(cpuinfo())
@@ -96,7 +111,7 @@ flush(stdout) ; flush(stderr)
 include("mock.jl")
 include("mockdb.jl")
 
-dump_cpuid_table() ; flush(stdout) ; flush(stderr)
+has_cpuid && dump_cpuid_table() ; flush(stdout) ; flush(stderr)
 
 print("\n\n-----\nMocking CpuId\n-----\n\n")
 flush(stdout) ; flush(stderr)
@@ -105,9 +120,9 @@ flush(stdout) ; flush(stderr)
 @testset "Mocking" begin
     for i in 1:length(_mockdb)
         # temporarily replace the low-level cpuid function with known records
+        mock_cpuid(i)
         eval(quote
             @testset "Mocked #$($i) $(strip(cpubrand()))" begin
-                mock_cpuid($i)
                 flush(stdout) ; flush(stderr)
                 @test isa( cpubrand()       , String )
                 @test isa( cpuinfo()        , MD )
